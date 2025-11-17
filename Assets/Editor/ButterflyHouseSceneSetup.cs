@@ -84,6 +84,34 @@ namespace ButterflyHouse.Editor
             
             return new Material(shader) { name = name };
         }
+        
+        /// <summary>
+        /// Create a trail material with proper URP shader for trails.
+        /// </summary>
+        private static Material CreateTrailMaterialForEditor()
+        {
+            // Try URP Unlit shader first (best for trails)
+            Shader trailShader = Shader.Find("Universal Render Pipeline/Unlit") ??
+                                 Shader.Find("Unlit/Color") ??
+                                 Shader.Find("Sprites/Default");
+            
+            if (trailShader == null)
+            {
+                Debug.LogWarning("Could not find suitable trail shader. Trail may appear magenta.");
+                trailShader = Shader.Find("Hidden/InternalErrorShader");
+            }
+            
+            Material mat = new Material(trailShader);
+            mat.name = "TrailMaterial";
+            
+            // Set color to white (trail colors come from vertex colors)
+            if (mat.HasProperty("_BaseColor"))
+                mat.SetColor("_BaseColor", Color.white);
+            else if (mat.HasProperty("_Color"))
+                mat.SetColor("_Color", Color.white);
+            
+            return mat;
+        }
         [MenuItem("Butterfly House/Setup Sample Scene", false, 1)]
         public static void SetupScene()
         {
@@ -307,9 +335,11 @@ namespace ButterflyHouse.Editor
             trail.time = 2f;
             trail.startWidth = 0.1f;
             trail.endWidth = 0f;
-            // Try URP shader first, fallback to built-in if not found
-            Shader trailShader = GetUnlitShader();
-            trail.material = CreateMaterial(trailShader, "TrailMaterial");
+            
+            // Create trail material with URP-compatible shader
+            Material trailMat = CreateTrailMaterialForEditor();
+            trail.material = trailMat;
+            
             trail.startColor = Color.white;
             trail.endColor = new Color(1f, 1f, 1f, 0f);
             

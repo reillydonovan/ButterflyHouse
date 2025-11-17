@@ -67,8 +67,55 @@ namespace ButterflyHouse.Butterflies
             if (butterflyCollider == null)
                 butterflyCollider = GetComponent<Collider>();
             
+            // Fix trail material early if it's invalid
+            if (trailRenderer != null)
+            {
+                FixTrailMaterialIfNeeded();
+            }
+            
             _noiseOffset = Random.insideUnitSphere * 100f;
             _focalPoint = transform.position;
+        }
+        
+        /// <summary>
+        /// Check and fix trail material if it's missing or using an invalid shader.
+        /// </summary>
+        private void FixTrailMaterialIfNeeded()
+        {
+            if (trailRenderer == null) return;
+            
+            bool needsFix = false;
+            
+            // Check if material is null
+            if (trailRenderer.sharedMaterial == null)
+            {
+                needsFix = true;
+            }
+            // Check if material uses an error shader
+            else if (trailRenderer.sharedMaterial != null)
+            {
+                string shaderName = trailRenderer.sharedMaterial.shader.name;
+                if (shaderName.Contains("Error") || 
+                    shaderName == "Hidden/InternalErrorShader" ||
+                    shaderName == "Hidden/InternalErrorShader (UnityEngine.Shader)")
+                {
+                    needsFix = true;
+                }
+            }
+            
+            if (needsFix)
+            {
+                Material trailMat = CreateTrailMaterial();
+                if (trailMat != null)
+                {
+                    trailRenderer.sharedMaterial = trailMat;
+                    Debug.Log($"Butterfly: Fixed trail material with shader '{trailMat.shader.name}'");
+                }
+                else
+                {
+                    Debug.LogWarning("Butterfly: Could not create trail material. Trail will appear magenta.");
+                }
+            }
         }
         
         /// <summary>
@@ -102,9 +149,19 @@ namespace ButterflyHouse.Butterflies
                 audioController.Initialize(this, archetype);
             }
             
-            if (trailRenderer != null && Settings.Instance != null)
+            if (trailRenderer != null)
             {
-                trailRenderer.enabled = Settings.Instance.enableTrails;
+                // Ensure trail material is valid (should be fixed in Awake, but double-check)
+                FixTrailMaterialIfNeeded();
+                
+                if (Settings.Instance != null)
+                {
+                    trailRenderer.enabled = Settings.Instance.enableTrails;
+                }
+                else
+                {
+                    trailRenderer.enabled = true;
+                }
                 
                 // Set trail color from archetype gradient
                 var color = archetype.wingColorGradient.Evaluate(0f);
@@ -394,6 +451,46 @@ namespace ButterflyHouse.Butterflies
             _currentState = State.Dissipating;
             StopAllCoroutines();
             StartCoroutine(DissipatingCoroutine());
+        }
+        
+        /// <summary>
+        /// Create a trail material with URP-compatible shader at runtime.
+        /// </summary>
+        private Material CreateTrailMaterial()
+        {
+            // Try URP shaders first
+            Shader trailShader = Shader.Find("Universal Render Pipeline/Unlit") ??
+                                 Shader.Find("Universal Render Pipeline/Simple Lit") ??
+                                 Shader.Find("Unlit/Color") ??
+                                 Shader.Find("Sprites/Default") ??
+                                 Shader.Find("Legacy Shaders/Particles/Alpha Blended");
+            
+            if (trailShader == null)
+            {
+                Debug.LogWarning($"Butterfly: Could not find suitable trail shader. Trail may appear magenta.");
+                return null;
+            }
+            
+            Material mat = new Material(trailShader);
+            mat.name = "TrailMaterial_Runtime";
+            
+            // Set color to white (trail colors come from vertex colors via startColor/endColor)
+            if (mat.HasProperty("_BaseColor"))
+            {
+                mat.SetColor("_BaseColor", Color.white);
+            }
+            else if (mat.HasProperty("_Color"))
+            {
+                mat.SetColor("_Color", Color.white);
+            }
+            
+            // Enable vertex colors if supported
+            if (mat.HasProperty("_VertexColorMode"))
+            {
+                mat.SetFloat("_VertexColorMode", 1f);
+            }
+            
+            return mat;
         }
         
         private void OnDrawGizmosSelected()
