@@ -192,6 +192,8 @@ MonoBehaviour:
   landingTargetLayer:
     serializedVersion: 2
     m_Bits: 4294967295
+  minLandingDuration: 2
+  maxLandingDuration: 8
 --- !u!82 &1962336036909699428
 AudioSource:
   m_ObjectHideFlags: 0

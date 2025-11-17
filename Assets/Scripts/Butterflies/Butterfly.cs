@@ -33,13 +33,25 @@ namespace ButterflyHouse.Butterflies
         [SerializeField] private float landingCheckInterval = 2f;
         [SerializeField] private float landingRadius = 3f;
         [SerializeField] private LayerMask landingTargetLayer = -1;
+        [Range(1f, 30f)]
+        [SerializeField] private float minLandingDuration = 2f;
+        [Range(1f, 30f)]
+        [SerializeField] private float maxLandingDuration = 8f;
+        [Range(5f, 60f)]
+        [SerializeField] private float minLandingCooldown = 10f;
+        [Range(5f, 60f)]
+        [SerializeField] private float maxLandingCooldown = 30f;
         
         private ButterflyArchetype _archetype;
         private State _currentState = State.Emerging;
         private Vector3 _velocity;
         private float _age;
         private float _landingTimer;
+        private float _landingDuration;
+        private float _landingStartTime;
+        private float _landingCooldownEndTime;
         private Interaction.LandingTarget _currentLandingTarget;
+        private Interaction.LandingTarget _lastLandingTarget;
         private Vector3 _landingOffset;
         private float _normalizedAge => _age / (_archetype?.lifetime ?? 60f);
         
@@ -331,19 +343,43 @@ namespace ButterflyHouse.Butterflies
             // Only check if we're not already landing and it's time to land
             if (_currentLandingTarget != null) return;
             
+            // Check if we're in landing cooldown period
+            if (Time.time < _landingCooldownEndTime) return;
+            
             // Random chance to seek landing target
             if (Random.value > 0.3f) return;
             
             Collider[] nearbyTargets = Physics.OverlapSphere(transform.position, landingRadius, landingTargetLayer);
             
+            // Prioritize fruits, then other targets
+            Interaction.LandingTarget fruitTarget = null;
+            Interaction.LandingTarget otherTarget = null;
+            
             foreach (var target in nearbyTargets)
             {
                 var landingTarget = target.GetComponent<Interaction.LandingTarget>();
-                if (landingTarget != null && landingTarget.IsAvailable)
+                if (landingTarget == null || !landingTarget.IsAvailable) continue;
+                
+                // Skip if this is the last place we landed (unless we've landed somewhere else since)
+                if (landingTarget == _lastLandingTarget) continue;
+                
+                // Check if it's a fruit
+                if (landingTarget.Type == Interaction.LandingTarget.TargetType.Fruit)
                 {
-                    AttemptLanding(landingTarget);
-                    break;
+                    fruitTarget = landingTarget;
+                    break; // Prioritize fruits, take first available
                 }
+                else if (otherTarget == null)
+                {
+                    otherTarget = landingTarget;
+                }
+            }
+            
+            // Prefer fruit over other targets
+            Interaction.LandingTarget chosenTarget = fruitTarget ?? otherTarget;
+            if (chosenTarget != null)
+            {
+                AttemptLanding(chosenTarget);
             }
         }
         
@@ -353,10 +389,25 @@ namespace ButterflyHouse.Butterflies
             _currentLandingTarget.Reserve(this);
             _currentState = State.Landing;
             
+            // Set random landing duration
+            _landingDuration = Random.Range(minLandingDuration, maxLandingDuration);
+            _landingStartTime = Time.time;
+            
             // Calculate landing offset
             Vector3 toButterfly = transform.position - target.transform.position;
             _landingOffset = target.transform.InverseTransformVector(toButterfly);
             _landingOffset = Vector3.ClampMagnitude(_landingOffset, 0.3f);
+            
+            // Notify fruit if it's a fruit target
+            Plants.GenerativeFruit fruit = target.GetComponent<Plants.GenerativeFruit>();
+            if (fruit == null && target.transform.parent != null)
+            {
+                fruit = target.transform.parent.GetComponent<Plants.GenerativeFruit>();
+            }
+            if (fruit != null)
+            {
+                fruit.OnButterflyLanded(this);
+            }
         }
         
         private void UpdateLanding()
@@ -389,9 +440,11 @@ namespace ButterflyHouse.Butterflies
                     audioController.SetIntensity(0.3f);
                 }
                 
-                // Random chance to take off again
-                if (Random.value < 0.05f * Time.deltaTime)
+                // Check if landing duration has elapsed
+                float landingTimeElapsed = Time.time - _landingStartTime;
+                if (landingTimeElapsed >= _landingDuration)
                 {
+                    // Landing duration complete, take off
                     TakeOff();
                 }
             }
@@ -399,13 +452,33 @@ namespace ButterflyHouse.Butterflies
         
         public void TakeOff()
         {
+            Interaction.LandingTarget targetToRelease = _currentLandingTarget;
+            
             if (_currentLandingTarget != null)
             {
+                // Store this as the last landing target
+                _lastLandingTarget = _currentLandingTarget;
+                
+                // Notify fruit if it's a fruit target
+                Plants.GenerativeFruit fruit = _currentLandingTarget.GetComponent<Plants.GenerativeFruit>();
+                if (fruit == null && _currentLandingTarget.transform.parent != null)
+                {
+                    fruit = _currentLandingTarget.transform.parent.GetComponent<Plants.GenerativeFruit>();
+                }
+                if (fruit != null)
+                {
+                    fruit.OnButterflyLeft(this);
+                }
+                
                 _currentLandingTarget.Release();
                 _currentLandingTarget = null;
             }
             
             _currentState = State.Flying;
+            
+            // Set random landing cooldown - won't try to land again for this duration
+            float cooldownDuration = Random.Range(minLandingCooldown, maxLandingCooldown);
+            _landingCooldownEndTime = Time.time + cooldownDuration;
             
             // Reset audio
             if (audioController != null)

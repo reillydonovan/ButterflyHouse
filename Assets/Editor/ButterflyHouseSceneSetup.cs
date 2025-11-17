@@ -201,6 +201,17 @@ namespace ButterflyHouse.Editor
                 );
             }
             
+            // Create sample GenerativeFruit objects
+            for (int i = 0; i < 5; i++)
+            {
+                GameObject fruitObj = CreateFruitObject();
+                fruitObj.transform.position = new Vector3(
+                    Random.Range(-5f, 5f),
+                    Random.Range(0.5f, 2f),
+                    Random.Range(-5f, 5f)
+                );
+            }
+            
             // Create sample LandingTarget objects
             for (int i = 0; i < 3; i++)
             {
@@ -235,6 +246,13 @@ namespace ButterflyHouse.Editor
             {
                 if (child.name.StartsWith("LandingTarget"))
                     child.transform.SetParent(landingParent.transform);
+            }
+            
+            GameObject fruitsParent = new GameObject("Fruits");
+            foreach (GameObject child in scene.GetRootGameObjects())
+            {
+                if (child.name.StartsWith("GenerativeFruit"))
+                    child.transform.SetParent(fruitsParent.transform);
             }
             
             // Mark scene as dirty and save
@@ -504,6 +522,78 @@ namespace ButterflyHouse.Editor
             visual.GetComponent<Renderer>().material = mat;
             
             return landingObj;
+        }
+        
+        private static GameObject CreateFruitObject()
+        {
+            GameObject fruitObj = new GameObject("GenerativeFruit");
+            
+            // Add mesh (sphere for fruit)
+            GameObject fruitMesh = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            fruitMesh.name = "FruitMesh";
+            fruitMesh.transform.SetParent(fruitObj.transform);
+            fruitMesh.transform.localPosition = Vector3.zero;
+            fruitMesh.transform.localScale = Vector3.one * 0.4f;
+            
+            // Add components
+            Plants.GenerativeFruit fruit = fruitObj.AddComponent<Plants.GenerativeFruit>();
+            AudioSource audioSource = fruitObj.AddComponent<AudioSource>();
+            
+            // Configure AudioSource
+            audioSource.playOnAwake = false;
+            audioSource.loop = false;
+            audioSource.spatialBlend = 1f;
+            
+            // Set material
+            Shader fruitShader = GetLitShader();
+            Material fruitMat = CreateMaterial(fruitShader, "FruitMaterial");
+            
+            // Random fruit color
+            Color[] fruitColors = new Color[]
+            {
+                new Color(1f, 0.3f, 0.3f, 1f), // Red
+                new Color(1f, 0.7f, 0.2f, 1f), // Orange
+                new Color(1f, 0.9f, 0.3f, 1f), // Yellow
+                new Color(0.8f, 0.9f, 0.3f, 1f), // Green-Yellow
+                new Color(0.7f, 0.2f, 0.8f, 1f), // Purple
+            };
+            Color fruitColor = fruitColors[Random.Range(0, fruitColors.Length)];
+            
+            fruitMat.color = fruitColor;
+            if (fruitMat.HasProperty("_Metallic"))
+                fruitMat.SetFloat("_Metallic", 0.2f);
+            if (fruitMat.HasProperty("_Smoothness"))
+                fruitMat.SetFloat("_Smoothness", 0.7f);
+            else if (fruitMat.HasProperty("_Glossiness"))
+                fruitMat.SetFloat("_Glossiness", 0.7f);
+            
+            fruitMesh.GetComponent<Renderer>().material = fruitMat;
+            
+            // Set up GenerativeFruit component via SerializedObject
+            SerializedObject fruitSO = new SerializedObject(fruit);
+            SerializedProperty createLandingProp = fruitSO.FindProperty("createLandingTarget");
+            if (createLandingProp != null)
+            {
+                createLandingProp.boolValue = true;
+            }
+            SerializedProperty landingZoneProp = fruitSO.FindProperty("landingZoneRadius");
+            if (landingZoneProp != null)
+            {
+                landingZoneProp.floatValue = 0.3f;
+            }
+            SerializedProperty animateGlowProp = fruitSO.FindProperty("animateGlow");
+            if (animateGlowProp != null)
+            {
+                animateGlowProp.boolValue = true;
+            }
+            SerializedProperty glowIntensityProp = fruitSO.FindProperty("glowIntensity");
+            if (glowIntensityProp != null)
+            {
+                glowIntensityProp.floatValue = 0.5f;
+            }
+            fruitSO.ApplyModifiedProperties();
+            
+            return fruitObj;
         }
     }
 }

@@ -13,6 +13,7 @@ namespace ButterflyHouse.Interaction
         {
             Hand,
             Plant,
+            Fruit,
             Environment
         }
         
