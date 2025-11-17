@@ -215,6 +215,15 @@ The experience evolves through 5 stages:
   - **Alignment**: Align with nearby butterfly velocities
   - **Separation**: Avoid crowding nearby butterflies
   - Butterflies can break out of flocks randomly, after time, or when distance increases
+  - **Flocking Cooldown**: After leaving a flock, butterflies cannot re-enter for a random duration (10-30 seconds) to prevent getting trapped
+- **Territory Exploration**: Butterflies actively explore the space and avoid getting stuck:
+  - **Territory Tracking**: Each butterfly tracks its current territory position (5m radius)
+  - **Stuck Detection**: If a butterfly stays in the same territory for 60 seconds, it triggers exploration mode
+  - **Territory Seeking**: When stuck, butterflies pick a distant target (15m+ away) and move toward it with increased speed (1.5x)
+  - **Flocking Prevention**: Butterflies cannot join flocks while seeking new territory
+  - **Natural Movement**: Territory-seeking movement includes slight noise (30% of normal path) for organic motion
+  - **Territory Reset**: When butterflies reach new territory (10m+ from old territory), they reset tracking and can flock again
+  - **Space Redistribution**: This system ensures butterflies explore the entire space rather than clustering in one area
 - **Waveform Transformation** (Stage 4+): Visual morphing into sine/saw/square/FM waveforms
 
 #### Landing Behavior
@@ -542,7 +551,8 @@ Your hands evolve through progression levels:
 - **Butterfly Landing** - Butterflies can land on hands, plants, flowers, or fruits, creating dynamic interactions
 - **Trail System** - Beautiful particle trails that follow butterfly movements
 - **Audio-Visual Synthesis** - Butterfly motion maps to sound, creating an evolving soundscape
-- **Flocking Behavior** - Butterflies form flocks using Boids algorithm when near each other
+- **Flocking Behavior** - Butterflies form flocks using Boids algorithm when near each other, with cooldown periods to prevent getting trapped
+- **Territory Exploration** - Butterflies track their territory and seek new areas when stuck too long, ensuring even distribution across the space
 - **Energy & Pollination Systems** - Butterflies track energy and pollen, creating emergent behaviors
 
 ### Progression System
@@ -735,6 +745,10 @@ Butterflies use procedural flight paths:
   - **Cohesion**: Move toward nearby butterflies
   - **Alignment**: Align with nearby butterfly velocities
   - **Separation**: Avoid crowding
+  - **Flocking cooldown**: 10-30 second cooldown after leaving flocks to prevent re-entry traps
+- **Territory exploration**: Butterflies track their territory and seek new areas when stuck (60s in same 5m radius)
+  - Prevents clustering and ensures even distribution across the space
+  - Cannot flock while seeking new territory
 - **Target seeking** for landing zones (fruits, flowers, plants, hands)
 - **Energy-based behavior**: Low-energy butterflies prioritize fruits and flowers
 - **Lifetime system**: Butterflies live 5-30 minutes (random), extended by feeding on fruits (+60s) and pollinating flowers (+45s)

@@ -50,7 +50,8 @@ namespace ButterflyHouse.Butterflies
         
         [Header("Flocking")]
         [SerializeField] private bool enableFlocking = true;
-        [SerializeField] private float flockDetectionRadius = 5f;
+        [SerializeField] private float flockDetectionRadius = 1f; // Very close proximity required - butterflies must be within 1 meter to flock
+        [SerializeField] private int minButterfliesForFlock = 2; // Minimum number of nearby butterflies required to form a flock
         [SerializeField] private float flockCohesionWeight = 1f;
         [SerializeField] private float flockAlignmentWeight = 1f;
         [SerializeField] private float flockSeparationWeight = 1.5f;
@@ -66,6 +67,14 @@ namespace ButterflyHouse.Butterflies
         [SerializeField] private float minFlockingCooldown = 10f; // Minimum cooldown after leaving flock
         [Range(10f, 120f)]
         [SerializeField] private float maxFlockingCooldown = 30f; // Maximum cooldown after leaving flock
+        
+        [Header("Territory Exploration")]
+        [SerializeField] private bool enableTerritoryExploration = true;
+        [SerializeField] private float territoryCheckRadius = 5f; // Radius to consider "same territory"
+        [SerializeField] private float maxTimeInTerritory = 60f; // Max seconds in same area before seeking new territory
+        [SerializeField] private float territoryReachedDistance = 10f; // Distance to consider new territory "reached"
+        [SerializeField] private float newTerritoryMinDistance = 15f; // Minimum distance to travel for new territory
+        [SerializeField] private float territorySeekSpeed = 1.5f; // Speed multiplier when seeking new territory
         
         [Header("Debug")]
         [SerializeField] private bool enableDebugLogs = true; // Enabled by default for debugging
@@ -108,6 +117,14 @@ namespace ButterflyHouse.Butterflies
         private float _flockingCooldownEndTime = 0f; // When the butterfly can re-enter a flock
         private Vector3 _flockVelocity = Vector3.zero;
         private readonly List<Butterfly> _nearbyButterflies = new List<Butterfly>();
+        
+        // Territory exploration parameters
+        private Vector3 _currentTerritoryPosition;
+        private float _timeInCurrentTerritory = 0f;
+        private bool _seekingNewTerritory = false;
+        private Vector3 _newTerritoryTarget;
+        private float _territoryCheckTimer = 0f;
+        private const float TERRITORY_CHECK_INTERVAL = 1f; // Check territory every second
         
         // Debug tracking
         private float _debugLogTimer = 0f;
@@ -277,6 +294,12 @@ namespace ButterflyHouse.Butterflies
                 _focalPoint = Vector3.zero;
             }
             
+            // Initialize territory tracking
+            _currentTerritoryPosition = transform.position;
+            _timeInCurrentTerritory = 0f;
+            _seekingNewTerritory = false;
+            _territoryCheckTimer = 0f;
+            
             _lastPosition = transform.position; // Initialize for debug tracking
             
             if (enableDebugLogs)
@@ -440,8 +463,47 @@ namespace ButterflyHouse.Butterflies
             float t = Time.time;
             float speed = _archetype.flightSpeedCurve.Evaluate(_normalizedAge);
             
-            // Always calculate individual flight path (Perlin noise-based wandering)
-            Vector3 individualDir = CalculateIndividualFlightPath(t, speed);
+            // Calculate individual flight path
+            // If seeking new territory, override with territory-seeking direction
+            Vector3 individualDir;
+            if (_seekingNewTerritory && enableTerritoryExploration)
+            {
+                // Seek new territory - move directly toward target
+                Vector3 toTarget = (_newTerritoryTarget - transform.position);
+                float distanceToTarget = toTarget.magnitude;
+                
+                if (distanceToTarget < territoryReachedDistance)
+                {
+                    // Reached new territory - reset territory tracking
+                    _currentTerritoryPosition = transform.position;
+                    _timeInCurrentTerritory = 0f;
+                    _seekingNewTerritory = false;
+                    _newTerritoryTarget = Vector3.zero;
+                    
+                    if (enableDebugLogs)
+                        Debug.Log($"[Butterfly] {gameObject.name}: Reached new territory! Position: {transform.position}");
+                    
+                    // Fall back to normal flight path
+                    individualDir = CalculateIndividualFlightPath(t, speed);
+                }
+                else
+                {
+                    // Still seeking - move toward target with some noise for natural movement
+                    individualDir = toTarget.normalized;
+                    
+                    // Add slight noise to make movement more natural (not perfectly straight)
+                    Vector3 noiseOffset = CalculateIndividualFlightPath(t, speed) * 0.3f;
+                    individualDir = (individualDir + noiseOffset).normalized;
+                    
+                    // Increase speed when seeking new territory
+                    speed *= territorySeekSpeed;
+                }
+            }
+            else
+            {
+                // Normal flight path (Perlin noise-based wandering)
+                individualDir = CalculateIndividualFlightPath(t, speed);
+            }
             
             if (enableDebugLogs && _debugLogTimer < 0.1f) // Log only occasionally
             {
@@ -454,10 +516,17 @@ namespace ButterflyHouse.Butterflies
             bool shouldFlock = false;
             bool hasValidFlockDir = false;
             
+            // Update territory tracking
+            if (enableTerritoryExploration && _currentState == State.Flying)
+            {
+                UpdateTerritoryTracking();
+            }
+            
             if (enableFlocking && _currentState == State.Flying)
             {
-                // Check if cooldown has expired before allowing flocking
-                bool canFlock = !enableFlockingCooldown || Time.time >= _flockingCooldownEndTime;
+                // Cannot flock while seeking new territory
+                bool canFlock = (!enableFlockingCooldown || Time.time >= _flockingCooldownEndTime) 
+                                && !_seekingNewTerritory;
                 
                 if (canFlock)
                 {
@@ -696,6 +765,112 @@ namespace ButterflyHouse.Butterflies
         }
         
         /// <summary>
+        /// Update territory tracking and trigger exploration if stuck too long.
+        /// </summary>
+        private void UpdateTerritoryTracking()
+        {
+            _territoryCheckTimer += Time.deltaTime;
+            
+            // Only check territory every TERRITORY_CHECK_INTERVAL seconds
+            if (_territoryCheckTimer < TERRITORY_CHECK_INTERVAL)
+                return;
+            
+            _territoryCheckTimer = 0f;
+            
+            // Check if still in current territory
+            float distanceToTerritory = Vector3.Distance(transform.position, _currentTerritoryPosition);
+            
+            if (distanceToTerritory <= territoryCheckRadius)
+            {
+                // Still in same territory - increment timer
+                _timeInCurrentTerritory += TERRITORY_CHECK_INTERVAL;
+                
+                // Check if we've been here too long
+                if (_timeInCurrentTerritory >= maxTimeInTerritory && !_seekingNewTerritory)
+                {
+                    // Start seeking new territory
+                    _seekingNewTerritory = true;
+                    PickNewTerritoryTarget();
+                    
+                    // Exit flock if in one (can't flock while seeking new territory)
+                    if (_isInFlock)
+                    {
+                        ExitFlock("seeking new territory");
+                    }
+                    
+                    if (enableDebugLogs)
+                        Debug.Log($"[Butterfly] {gameObject.name}: Stuck in territory for {_timeInCurrentTerritory:F1}s. Seeking new territory at {_newTerritoryTarget}");
+                }
+            }
+            else
+            {
+                // Moved to different area - reset territory tracking
+                _currentTerritoryPosition = transform.position;
+                _timeInCurrentTerritory = 0f;
+                
+                // If we were seeking new territory and have moved far enough, we've reached it
+                if (_seekingNewTerritory && distanceToTerritory >= territoryReachedDistance)
+                {
+                    _seekingNewTerritory = false;
+                    _newTerritoryTarget = Vector3.zero;
+                    
+                    if (enableDebugLogs)
+                        Debug.Log($"[Butterfly] {gameObject.name}: Reached new territory! Distance traveled: {distanceToTerritory:F1}m");
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Pick a new distant territory target to seek.
+        /// </summary>
+        private void PickNewTerritoryTarget()
+        {
+            if (ButterflyManager.Instance == null || !ButterflyManager.Instance.UseBoundingBox)
+            {
+                // No bounding box - pick random point in a sphere around current position
+                _newTerritoryTarget = transform.position + Random.onUnitSphere * newTerritoryMinDistance;
+                return;
+            }
+            
+            // Pick a random point within the bounding box, but ensure it's far enough away
+            Vector3 boxMin = ButterflyManager.Instance.BoundingBoxMin;
+            Vector3 boxMax = ButterflyManager.Instance.BoundingBoxMax;
+            
+            Vector3 candidateTarget;
+            int attempts = 0;
+            const int maxAttempts = 20;
+            
+            do
+            {
+                candidateTarget = new Vector3(
+                    Random.Range(boxMin.x, boxMax.x),
+                    Random.Range(boxMin.y, boxMax.y),
+                    Random.Range(boxMin.z, boxMax.z)
+                );
+                attempts++;
+            }
+            while (Vector3.Distance(candidateTarget, transform.position) < newTerritoryMinDistance && attempts < maxAttempts);
+            
+            // If we couldn't find a point far enough away, use a point on the sphere
+            if (attempts >= maxAttempts)
+            {
+                Vector3 direction = Random.onUnitSphere;
+                if (direction.sqrMagnitude < 0.01f)
+                    direction = Vector3.forward;
+                
+                candidateTarget = transform.position + direction * newTerritoryMinDistance;
+                
+                // Clamp to bounding box
+                candidateTarget = ButterflyManager.Instance.ClampToBounds(candidateTarget);
+            }
+            
+            _newTerritoryTarget = candidateTarget;
+            
+            if (enableDebugLogs)
+                Debug.Log($"[Butterfly] {gameObject.name}: Picked new territory target at {_newTerritoryTarget}, distance: {Vector3.Distance(transform.position, _newTerritoryTarget):F1}m");
+        }
+        
+        /// <summary>
         /// Check if there are nearby butterflies to form a flock with.
         /// </summary>
         private bool CheckForFlocking()
@@ -736,11 +911,11 @@ namespace ButterflyHouse.Butterflies
             
             if (enableDebugLogs && _nearbyButterflies.Count > 0 && _debugLogTimer < 0.1f)
             {
-                Debug.Log($"[Butterfly] {gameObject.name}: Found {_nearbyButterflies.Count} nearby butterflies within {flockDetectionRadius}m");
+                Debug.Log($"[Butterfly] {gameObject.name}: Found {_nearbyButterflies.Count} nearby butterflies within {flockDetectionRadius}m (need {minButterfliesForFlock} to flock)");
             }
             
-            // Need at least one other butterfly to form a flock
-            return _nearbyButterflies.Count >= 1;
+            // Need at least minButterfliesForFlock nearby butterflies to form a flock
+            return _nearbyButterflies.Count >= minButterfliesForFlock;
         }
         
         /// <summary>
