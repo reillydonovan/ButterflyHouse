@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using ButterflyHouse.Butterflies;
 using ButterflyHouse.Plants;
 using ButterflyHouse.Flowers;
@@ -290,41 +291,82 @@ namespace ButterflyHouse.Core
         
         /// <summary>
         /// Handle keyboard input for manual stage progression (for testing/development).
+        /// Uses the new Unity Input System if available, otherwise falls back to legacy Input.
         /// </summary>
         private void HandleKeyboardInput()
         {
             if (ecosystemState == null || progressionStageManager == null) return;
             
-            // Cycle stages up
-            if (Input.GetKeyDown(stageUpKey))
+            // Try to use new Input System first
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard != null)
             {
-                int currentStage = ecosystemState.ProgressionStage;
-                int nextStage = Mathf.Min(5, currentStage + 1);
-                if (nextStage != currentStage)
+                // Cycle stages up (Page Up)
+                if (keyboard.pageUpKey.wasPressedThisFrame)
                 {
-                    SetStageManually(nextStage);
+                    int currentStage = ecosystemState.ProgressionStage;
+                    int nextStage = Mathf.Min(5, currentStage + 1);
+                    if (nextStage != currentStage)
+                    {
+                        SetStageManually(nextStage);
+                    }
                 }
+                
+                // Cycle stages down (Page Down)
+                if (keyboard.pageDownKey.wasPressedThisFrame)
+                {
+                    int currentStage = ecosystemState.ProgressionStage;
+                    int prevStage = Mathf.Max(0, currentStage - 1);
+                    if (prevStage != currentStage)
+                    {
+                        SetStageManually(prevStage);
+                    }
+                }
+                
+                // Direct stage selection with number keys (1-6)
+                if (keyboard.digit1Key.wasPressedThisFrame) SetStageManually(0);
+                if (keyboard.digit2Key.wasPressedThisFrame) SetStageManually(1);
+                if (keyboard.digit3Key.wasPressedThisFrame) SetStageManually(2);
+                if (keyboard.digit4Key.wasPressedThisFrame) SetStageManually(3);
+                if (keyboard.digit5Key.wasPressedThisFrame) SetStageManually(4);
+                if (keyboard.digit6Key.wasPressedThisFrame) SetStageManually(5);
             }
-            
-            // Cycle stages down
-            if (Input.GetKeyDown(stageDownKey))
+            else
             {
-                int currentStage = ecosystemState.ProgressionStage;
-                int prevStage = Mathf.Max(0, currentStage - 1);
-                if (prevStage != currentStage)
+                // Fallback to legacy Input System if new one is not available
+                #if ENABLE_LEGACY_INPUT_MANAGER
+                // Cycle stages up
+                if (Input.GetKeyDown(stageUpKey))
                 {
-                    SetStageManually(prevStage);
+                    int currentStage = ecosystemState.ProgressionStage;
+                    int nextStage = Mathf.Min(5, currentStage + 1);
+                    if (nextStage != currentStage)
+                    {
+                        SetStageManually(nextStage);
+                    }
                 }
-            }
-            
-            // Direct stage selection with number keys (1-6)
-            for (int i = 0; i < stageKeys.Length && i <= 5; i++)
-            {
-                if (Input.GetKeyDown(stageKeys[i]))
+                
+                // Cycle stages down
+                if (Input.GetKeyDown(stageDownKey))
                 {
-                    int targetStage = i; // Alpha1 = stage 0, Alpha2 = stage 1, etc.
-                    SetStageManually(targetStage);
+                    int currentStage = ecosystemState.ProgressionStage;
+                    int prevStage = Mathf.Max(0, currentStage - 1);
+                    if (prevStage != currentStage)
+                    {
+                        SetStageManually(prevStage);
+                    }
                 }
+                
+                // Direct stage selection with number keys (1-6)
+                for (int i = 0; i < stageKeys.Length && i <= 5; i++)
+                {
+                    if (Input.GetKeyDown(stageKeys[i]))
+                    {
+                        int targetStage = i; // Alpha1 = stage 0, Alpha2 = stage 1, etc.
+                        SetStageManually(targetStage);
+                    }
+                }
+                #endif
             }
         }
         

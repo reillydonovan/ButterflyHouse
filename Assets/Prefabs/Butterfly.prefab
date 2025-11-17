@@ -220,7 +220,7 @@ MonoBehaviour:
   territoryReachedDistance: 10
   newTerritoryMinDistance: 15
   territorySeekSpeed: 1.5
-  enableDebugLogs: 1
+  enableDebugLogs: 0
   debugLogInterval: 2
   minLifetime: 300
   maxLifetime: 1800

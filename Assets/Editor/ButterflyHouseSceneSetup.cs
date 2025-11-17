@@ -540,6 +540,15 @@ namespace ButterflyHouse.Editor
             // Add ButterflyFormEvolution
             ButterflyFormEvolution formEvolution = butterflyObj.AddComponent<ButterflyFormEvolution>();
             
+            // Configure debug settings - disable debug logs by default
+            SerializedObject butterflySO = new SerializedObject(butterfly);
+            SerializedProperty enableDebugLogsProp = butterflySO.FindProperty("enableDebugLogs");
+            if (enableDebugLogsProp != null)
+            {
+                enableDebugLogsProp.boolValue = false; // Disabled by default
+                butterflySO.ApplyModifiedProperties();
+            }
+            
             // Configure AudioSource
             audioSource.playOnAwake = false;
             audioSource.loop = true;

@@ -77,8 +77,8 @@ namespace ButterflyHouse.Butterflies
         [SerializeField] private float territorySeekSpeed = 1.5f; // Speed multiplier when seeking new territory
         
         [Header("Debug")]
-        [SerializeField] private bool enableDebugLogs = true; // Enabled by default for debugging
-        [SerializeField] private float debugLogInterval = 2f;
+        [SerializeField] private bool enableDebugLogs = false; // Disabled by default - enable for debugging
+        [SerializeField] private float debugLogInterval = 2f; // Minimum interval between debug logs (in seconds)
         
         [Header("Lifetime")]
         [SerializeField] private float minLifetime = 300f; // 5 minutes (300 seconds)
@@ -408,6 +408,16 @@ namespace ButterflyHouse.Butterflies
             
             _age += Time.deltaTime;
             
+            // Update debug log timer for throttling
+            if (enableDebugLogs)
+            {
+                _debugLogTimer += Time.deltaTime;
+                if (_debugLogTimer >= debugLogInterval)
+                {
+                    _debugLogTimer = 0f; // Reset timer
+                }
+            }
+            
             UpdateState();
             
             switch (_currentState)
@@ -415,16 +425,16 @@ namespace ButterflyHouse.Butterflies
                 case State.Emerging:
                     // Scale handled in coroutine
                     break;
-                    
+                
                 case State.Flying:
                     UpdateFlying();
                     CheckForLandingTargets();
                     break;
-                    
+                
                 case State.Landing:
                     UpdateLanding();
                     break;
-                    
+                
                 case State.Dissipating:
                     // Handled in coroutine
                     break;
@@ -505,10 +515,13 @@ namespace ButterflyHouse.Butterflies
                 individualDir = CalculateIndividualFlightPath(t, speed);
             }
             
-            if (enableDebugLogs && _debugLogTimer < 0.1f) // Log only occasionally
+            if (enableDebugLogs && _debugLogTimer < debugLogInterval) // Log only occasionally
             {
                 if (individualDir.sqrMagnitude < 0.01f)
+                {
                     Debug.LogWarning($"[Butterfly] {gameObject.name}: Individual direction is zero!");
+                    _debugLogTimer = debugLogInterval; // Prevent multiple logs this frame
+                }
             }
             
             // Check for flocking behavior
@@ -626,15 +639,21 @@ namespace ButterflyHouse.Butterflies
             {
                 Vector3 pullBack = -toFocal.normalized * (distance - _archetype.maxFlightRadius) * 0.5f;
                 finalDir += pullBack;
-                if (enableDebugLogs && _debugLogTimer < 0.1f)
+                if (enableDebugLogs && _debugLogTimer < debugLogInterval)
+                {
                     Debug.Log($"[Butterfly] {gameObject.name}: Pulled back (distance={distance:F2} > max={_archetype.maxFlightRadius:F2})");
+                    _debugLogTimer = debugLogInterval; // Prevent multiple logs this frame
+                }
             }
             else if (distance < _archetype.minFlightRadius)
             {
                 Vector3 pushOut = toFocal.normalized * (_archetype.minFlightRadius - distance) * 0.5f;
                 finalDir += pushOut;
-                if (enableDebugLogs && _debugLogTimer < 0.1f)
+                if (enableDebugLogs && _debugLogTimer < debugLogInterval)
+                {
                     Debug.Log($"[Butterfly] {gameObject.name}: Pushed out (distance={distance:F2} < min={_archetype.minFlightRadius:F2})");
+                    _debugLogTimer = debugLogInterval; // Prevent multiple logs this frame
+                }
             }
             
             // Constrain to bounding box with surface avoidance
@@ -671,16 +690,18 @@ namespace ButterflyHouse.Butterflies
                             
                             finalDir += perpendicularPush;
                             
-                            if (enableDebugLogs && _debugLogTimer < 0.1f)
+                            if (enableDebugLogs && _debugLogTimer < debugLogInterval)
                             {
                                 Debug.Log($"[Butterfly] {gameObject.name}: Dragging along surface - applying perpendicular push (pos={position:F2}, vel={velNormalized:F2}, boundary={boundarySteer:F2})");
+                                _debugLogTimer = debugLogInterval; // Prevent multiple logs this frame
                             }
                         }
                     }
                     
-                    if (enableDebugLogs && _debugLogTimer < 0.1f)
+                    if (enableDebugLogs && _debugLogTimer < debugLogInterval)
                     {
                         Debug.Log($"[Butterfly] {gameObject.name}: Steering from boundary (pos={position:F2}, steer={boundarySteer:F2}, strength={steerStrength:F2})");
+                        _debugLogTimer = debugLogInterval; // Prevent multiple logs this frame
                     }
                 }
             }
@@ -738,8 +759,11 @@ namespace ButterflyHouse.Butterflies
         {
             if (_archetype == null)
             {
-                if (enableDebugLogs && _debugLogTimer < 0.1f)
+                if (enableDebugLogs && _debugLogTimer < debugLogInterval)
+                {
                     Debug.LogWarning($"[Butterfly] {gameObject.name}: Cannot calculate flight path - archetype is null!");
+                    _debugLogTimer = debugLogInterval; // Prevent multiple logs this frame
+                }
                 return Vector3.forward; // Fallback
             }
             
@@ -756,8 +780,11 @@ namespace ButterflyHouse.Butterflies
             
             if (noiseDir.sqrMagnitude < 0.01f)
             {
-                if (enableDebugLogs && _debugLogTimer < 0.1f)
+                if (enableDebugLogs && _debugLogTimer < debugLogInterval)
+                {
                     Debug.LogWarning($"[Butterfly] {gameObject.name}: Calculated noiseDir is zero! Returning forward.");
+                    _debugLogTimer = debugLogInterval; // Prevent multiple logs this frame
+                }
                 return Vector3.forward; // Fallback
             }
             
@@ -877,8 +904,11 @@ namespace ButterflyHouse.Butterflies
         {
             if (ButterflyManager.Instance == null)
             {
-                if (enableDebugLogs && _debugLogTimer < 0.1f)
+                if (enableDebugLogs && _debugLogTimer < debugLogInterval)
+                {
                     Debug.LogWarning($"[Butterfly] {gameObject.name}: Cannot check for flocking - ButterflyManager.Instance is null!");
+                    _debugLogTimer = debugLogInterval; // Prevent multiple logs this frame
+                }
                 return false;
             }
             
@@ -888,8 +918,11 @@ namespace ButterflyHouse.Butterflies
             var allButterflies = ButterflyManager.Instance.GetActiveButterflies();
             if (allButterflies == null)
             {
-                if (enableDebugLogs && _debugLogTimer < 0.1f)
+                if (enableDebugLogs && _debugLogTimer < debugLogInterval)
+                {
                     Debug.LogWarning($"[Butterfly] {gameObject.name}: GetActiveButterflies() returned null!");
+                    _debugLogTimer = debugLogInterval; // Prevent multiple logs this frame
+                }
                 return false;
             }
             
@@ -909,9 +942,10 @@ namespace ButterflyHouse.Butterflies
                 }
             }
             
-            if (enableDebugLogs && _nearbyButterflies.Count > 0 && _debugLogTimer < 0.1f)
+            if (enableDebugLogs && _nearbyButterflies.Count > 0 && _debugLogTimer < debugLogInterval)
             {
                 Debug.Log($"[Butterfly] {gameObject.name}: Found {_nearbyButterflies.Count} nearby butterflies within {flockDetectionRadius}m (need {minButterfliesForFlock} to flock)");
+                _debugLogTimer = debugLogInterval; // Prevent multiple logs this frame
             }
             
             // Need at least minButterfliesForFlock nearby butterflies to form a flock
