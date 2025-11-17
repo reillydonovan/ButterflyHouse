@@ -808,6 +808,31 @@ Edit `EcosystemStateController.cs` to modify:
 - Meter decay/growth rates
 - Serenity detection sensitivity
 
+## ⌨️ Developer Controls
+
+### Keyboard Shortcuts (Testing/Development)
+
+While in Play mode, you can use keyboard controls to manually cycle through progression stages:
+
+**Stage Navigation:**
+- **Page Up** - Advance to next stage (0 → 1 → 2 → 3 → 4 → 5)
+- **Page Down** - Go back to previous stage (5 → 4 → 3 → 2 → 1 → 0)
+
+**Direct Stage Selection:**
+- **1** - Jump to Stage 0 (Emergence)
+- **2** - Jump to Stage 1 (Expansion)
+- **3** - Jump to Stage 2 (Symbiosis)
+- **4** - Jump to Stage 3 (Emergent Ecology)
+- **5** - Jump to Stage 4 (Synesthetic Overgrowth)
+- **6** - Jump to Stage 5 (Ascension)
+
+**Configuration:**
+- Keyboard controls are enabled by default in `EcosystemOrchestrator`
+- Can be toggled via `enableKeyboardControls` in the inspector
+- Key bindings can be customized in the inspector under "Keyboard Controls (Development/Testing)"
+
+**Note:** Manual stage changes trigger all normal progression events, so butterflies, plants, and other systems respond accordingly. This is useful for testing stage-specific behaviors without waiting for natural progression.
+
 ## 🐛 Troubleshooting
 
 ### No Sound from Butterflies

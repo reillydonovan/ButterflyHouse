@@ -40,6 +40,12 @@ namespace ButterflyHouse.Core
         [SerializeField] private Transform leftHandTransform;
         [SerializeField] private Transform rightHandTransform;
         
+        [Header("Keyboard Controls (Development/Testing)")]
+        [SerializeField] private bool enableKeyboardControls = true;
+        [SerializeField] private KeyCode stageUpKey = KeyCode.PageUp;
+        [SerializeField] private KeyCode stageDownKey = KeyCode.PageDown;
+        [SerializeField] private KeyCode[] stageKeys = { KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3, KeyCode.Alpha4, KeyCode.Alpha5, KeyCode.Alpha6 };
+        
         private Vector3 _lastHeadPos;
         private Vector3 _lastLeftHandPos;
         private Vector3 _lastRightHandPos;
@@ -110,6 +116,12 @@ namespace ButterflyHouse.Core
             
             // Update time alive
             ecosystemState.TimeAlive += Time.deltaTime;
+            
+            // Handle keyboard controls for stage cycling
+            if (enableKeyboardControls)
+            {
+                HandleKeyboardInput();
+            }
             
             // Throttled updates for performance
             if (Time.time >= _nextUpdateTime)
@@ -273,6 +285,71 @@ namespace ButterflyHouse.Core
             if (progressionStageManager != null)
             {
                 progressionStageManager.OnStageEntered(newStage);
+            }
+        }
+        
+        /// <summary>
+        /// Handle keyboard input for manual stage progression (for testing/development).
+        /// </summary>
+        private void HandleKeyboardInput()
+        {
+            if (ecosystemState == null || progressionStageManager == null) return;
+            
+            // Cycle stages up
+            if (Input.GetKeyDown(stageUpKey))
+            {
+                int currentStage = ecosystemState.ProgressionStage;
+                int nextStage = Mathf.Min(5, currentStage + 1);
+                if (nextStage != currentStage)
+                {
+                    SetStageManually(nextStage);
+                }
+            }
+            
+            // Cycle stages down
+            if (Input.GetKeyDown(stageDownKey))
+            {
+                int currentStage = ecosystemState.ProgressionStage;
+                int prevStage = Mathf.Max(0, currentStage - 1);
+                if (prevStage != currentStage)
+                {
+                    SetStageManually(prevStage);
+                }
+            }
+            
+            // Direct stage selection with number keys (1-6)
+            for (int i = 0; i < stageKeys.Length && i <= 5; i++)
+            {
+                if (Input.GetKeyDown(stageKeys[i]))
+                {
+                    int targetStage = i; // Alpha1 = stage 0, Alpha2 = stage 1, etc.
+                    SetStageManually(targetStage);
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Manually set the progression stage (for keyboard controls).
+        /// </summary>
+        private void SetStageManually(int targetStage)
+        {
+            if (ecosystemState == null) return;
+            
+            targetStage = Mathf.Clamp(targetStage, 0, 5);
+            int currentStage = ecosystemState.ProgressionStage;
+            
+            if (targetStage != currentStage)
+            {
+                Debug.Log($"[EcosystemOrchestrator] Manual stage change: {currentStage} → {targetStage} (via keyboard)");
+                
+                OnProgressionStageChanged(currentStage, targetStage);
+                ecosystemState.ProgressionStage = targetStage;
+                
+                // Also notify progression stage manager
+                if (progressionStageManager != null)
+                {
+                    progressionStageManager.OnStageEntered(targetStage);
+                }
             }
         }
         
