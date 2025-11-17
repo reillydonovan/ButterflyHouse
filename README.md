@@ -43,6 +43,31 @@ The experience is designed for presence and mindfulness. It's a living art insta
 - **Bloomed Plants**: Emit multiple notes in arpeggios instead of single tones.
 - **Sentient Plants**: Respond to your footsteps, sway to audio frequencies, and emit complex chords.
 
+#### Touching Flowers
+- **Visual Feedback**: Flowers respond to touch with a gentle pulse and petal movement
+- **Nectar Melody**: Touching a flower plays a harp-like nectar melody that varies by flower stage
+- **Stage-Based Responses**:
+  - **Bud Stage**: Single pure tone, minimal visual response
+  - **Bloom Stage**: 2-note motif, petals slightly open
+  - **Radiant Stage**: 3-5 note phrases, strong bioluminescent pulse
+  - **Meta Stage**: Evolving melodies, fractal visual patterns, space-warping effects
+- **Encourages Pollination**: Touching flowers can make them more attractive to butterflies
+- **Ecosystem Impact**: While touching doesn't directly pollinate, it helps flowers reach stages where butterflies can collect more pollen
+
+#### Touching Fruits
+- **Resonance Pulse**: Touching a fruit triggers a resonance pulse that emits melodic energy
+- **Stage-Based Melodies**: Fruits play different melodic sequences based on their growth stage:
+  - **Seed Stage**: Single pure tone
+  - **Harmonic Stage**: 2-3 note arpeggios
+  - **Resonant Stage**: Chords and harmonic pads
+  - **Celestial Stage**: Full-spectrum melodic sequences (levitating fruits)
+- **Visual Feedback**: 
+  - Temporary glow intensification
+  - Energy ripple effects
+  - Color shift synchronized with audio
+- **Butterfly Attraction**: Touching fruits can make them more noticeable to butterflies seeking energy
+- **Growth Influence**: Player interaction may accelerate fruit growth progression
+
 #### Hand Interactions
 - **Hand Presence**: Simply holding your hands out can attract butterflies.
 - **Butterfly Landings**: When butterflies land on your hands:
@@ -68,13 +93,17 @@ Once your hand aura reaches certain levels:
    - Sustained serenity (60+ seconds) unlocks advanced stages
 
 2. **Curiosity Level** (0-100)
-   - Increases when you touch plants
+   - Increases when you touch plants, flowers, and fruits
    - Increases with exploration and gestures
    - Opens up new plant types and interactions
+   - Touching different flower and fruit stages may provide different curiosity gains
 
 3. **Harmony Level** (0-100)
    - Increases when butterflies land on you
    - Increases with butterfly-plant interactions (pollination)
+   - Increases when butterflies pollinate flowers (0.3 per pollination event)
+   - Increases when butterflies feed from fruits (smaller increments)
+   - Watching butterflies interact with flowers and fruits passively increases harmony
    - Triggers rare events and unlocks final stages
 
 #### Stage Progression
@@ -230,15 +259,39 @@ Flowers grow from plants and serve as primary pollination targets for butterflie
 
 1. **Butterfly Approaches Flower**: When butterfly has low energy or no pollen, it seeks flowers
 2. **Butterfly Lands on Flower**: 
-   - Collects pollen (if flower has pollen)
-   - Feeds on nectar (restores energy)
-   - Triggers visual/audio feedback
+   - **Collects Pollen**: Butterfly gains pollen charge (up to max 3 units) from the flower
+   - **Feeds on Nectar**: Restores butterfly energy (nectar value varies by flower stage)
+   - **Visual Feedback**: Flower petals pulse, pollen dust particles appear, wings glow
+   - **Audio Feedback**: Harp-like glissando sound, flower's nectar melody plays
+   - **Color Sync**: Butterfly's color may briefly sync with flower's color
 3. **Butterfly Departs**: Carries pollen to next flower or fruit
-4. **Pollination Deposit**: 
-   - Increases flower's pollination count
-   - Advances flower stage
-   - Increases Harmony Level
-   - Meta-Flowers can spawn fruit seeds
+4. **Pollination Deposit**: When butterfly lands on another flower while carrying pollen:
+   - **Increases Pollination Count**: Flower's pollination count increments
+   - **Advances Flower Stage**: Flowers evolve (Bud → Bloom → Radiant → Meta) based on pollinations
+   - **Increases Harmony Level**: Each pollination event increases ecosystem Harmony Level
+   - **Meta-Flower Spawning**: Fully pollinated Meta-Flowers (stage 3) can spawn fruit seeds
+   - **Plant Growth Signal**: Pollinated flowers signal their parent plant to grow
+
+#### Detailed Butterfly-Flower Interactions
+
+**When Butterfly Lands on Flower**:
+- **Energy Restoration**: Butterfly gains energy equal to flower's `nectarValue` (0.5-2.0 based on stage)
+- **Pollen Collection**: Butterfly collects `pollenYield` amount (0.5-2.0 based on stage)
+- **Stage Benefits**: 
+  - Higher stage flowers (Radiant/Meta) provide more energy and pollen
+  - Meta-Flowers may trigger special visual/audio effects
+- **Pollen Decay**: If butterfly doesn't deposit pollen within ~30 seconds, pollen slowly decays
+- **Priority Selection**: 
+  - Low-energy butterflies prefer flowers with high nectar value
+  - Butterflies without pollen seek flowers to collect from
+  - Butterflies with pollen seek other flowers to deposit on
+
+**Visual Effects During Flower Landing**:
+- Flower petals open/close animation
+- Pollen dust particle burst
+- Butterfly wings intensify in color
+- Trail brightens and extends
+- Harmonic glissando audio sweep
 
 #### Flower Roles in Ecosystem
 
@@ -280,14 +333,55 @@ Fruits are melodic energy orbs that butterflies feed from and evolve through sta
 
 #### Fruit-Butterfly Interaction
 
-- **Resonance Field**: Fruits emit energy field that butterflies detect
-- **Energy Transfer**: Butterflies gain energy while feeding from fruits
-- **Visual Feedback**: 
-  - Wings intensify color
-  - Sonification burst on landing
-  - Trail brightness increases
-  - Waveform tier can ascend after feeding
-- **Feeding Behavior**: Low-energy butterflies prioritize fruits over flowers
+**Resonance Field System**:
+- Fruits emit an energy resonance field (radius varies by stage: 1-5 units)
+- Butterflies within the resonance field:
+  - Receive energy passively (slower rate than direct feeding)
+  - Trail brightness increases proportionally to proximity
+  - Audio harmonics shift toward fruit's melodic signature
+  - Wings may subtly pulse in sync with fruit's emission
+
+**Feeding Mechanics**:
+- **Energy Transfer**: Butterflies gain energy while landing on fruits (rate based on fruit's `energyOutput`)
+- **Stage-Based Energy**: 
+  - Seed Stage: Low energy output (0.3 units/sec)
+  - Harmonic Stage: Moderate energy (0.5 units/sec)
+  - Resonant Stage: High energy (0.8 units/sec)
+  - Celestial Stage: Maximum energy (1.2 units/sec)
+- **Feeding Duration**: Butterflies stay on fruits for 2-8 seconds (random) while feeding
+- **Growth Feedback**: Each butterfly feed increments fruit's feed count, accelerating growth progression
+
+**Visual Feedback During Fruit Feeding**:
+- **Wings Intensify**: Butterfly wing color saturates and brightens
+- **Sonification Burst**: Audio burst on landing, synchronized with fruit's melodic sequence
+- **Trail Brightness**: Trail brightness increases, may extend beyond normal duration
+- **Waveform Tier Ascension**: Feeding may trigger butterfly waveform evolution to next tier
+- **Particle Effects**: Energy particles flow from fruit to butterfly
+- **Fruit Pulse**: Fruit's glow pulse frequency increases during active feeding
+
+**Feeding Behavior & Priority**:
+- **Low-Energy Priority**: Butterflies with energy < 0.5 actively seek fruits (prioritize over flowers)
+- **Stage Selection**: Higher-stage fruits (Resonant/Celestial) are more attractive to butterflies
+- **Multiple Feeders**: Multiple butterflies can feed from the same fruit simultaneously
+- **Energy Thresholds**: 
+  - Energy < 0.3: Urgent fruit seeking (ignores most other targets)
+  - Energy 0.3-0.5: Prefers fruits but may land on flowers if closer
+  - Energy > 0.5: Balanced behavior, considers flowers and fruits equally
+
+**Pollen Deposition on Fruits**:
+- Butterflies can deposit pollen on fruits (if carrying pollen)
+- Pollen deposition accelerates fruit growth progression
+- Each pollen unit may increase feed count or trigger stage advancement
+- Visual feedback: Fruit may briefly glow more intensely when receiving pollen
+
+**Stage-Specific Interactions**:
+- **Seed/Harmonic Stages**: Basic energy transfer, simple visual feedback
+- **Resonant Stage**: Harmonic resonance field expands, affects multiple butterflies
+- **Celestial Stage**: 
+  - Levitating fruits emit wider resonance fields
+  - Butterflies may orbit around Celestial fruits
+  - Full-spectrum melodic sequences play continuously
+  - May trigger "Fruit Bloom" rare event when multiple Celestial fruits are active
 
 #### Fruit Growth Triggers
 
