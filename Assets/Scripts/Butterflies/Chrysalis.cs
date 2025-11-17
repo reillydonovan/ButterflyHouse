@@ -1,4 +1,5 @@
 using UnityEngine;
+using ButterflyHouse.Core;
 
 namespace ButterflyHouse.Butterflies
 {
@@ -16,6 +17,18 @@ namespace ButterflyHouse.Butterflies
         [SerializeField] private float spawnInterval = 20f;
         [SerializeField] private bool spawnOnStart = false;
         [SerializeField] private float initialDelay = 0f;
+        [SerializeField] private bool useRandomInitialDelay = true;
+        [SerializeField] private float randomInitialDelayMin = 5f;
+        [SerializeField] private float randomInitialDelayMax = 30f;
+        
+        [Header("Stage-Based Spawn Intervals")]
+        [SerializeField] private bool scaleSpawnIntervalWithStage = true;
+        [SerializeField] private float spawnIntervalStage0 = 60f; // Slow start - 1 minute between spawns
+        [SerializeField] private float spawnIntervalStage1 = 40f; // 40 seconds
+        [SerializeField] private float spawnIntervalStage2 = 30f; // 30 seconds
+        [SerializeField] private float spawnIntervalStage3 = 25f; // 25 seconds
+        [SerializeField] private float spawnIntervalStage4 = 20f; // 20 seconds
+        [SerializeField] private float spawnIntervalStage5 = 15f; // 15 seconds - faster for ascension
         
         [Header("Population Maintenance")]
         [SerializeField] private bool adjustSpawnRateForPopulation = true;
@@ -45,7 +58,25 @@ namespace ButterflyHouse.Butterflies
         
         private void Start()
         {
-            _timer = -initialDelay;
+            // Calculate initial delay (random if enabled)
+            float calculatedInitialDelay = initialDelay;
+            if (useRandomInitialDelay && initialDelay <= 0f)
+            {
+                calculatedInitialDelay = Random.Range(randomInitialDelayMin, randomInitialDelayMax);
+            }
+            
+            _timer = -calculatedInitialDelay;
+            
+            // Set base spawn interval based on current stage
+            if (scaleSpawnIntervalWithStage)
+            {
+                UpdateBaseSpawnIntervalForStage();
+            }
+            else
+            {
+                baseSpawnInterval = spawnIntervalStage0; // Default to slowest
+            }
+            
             spawnInterval = baseSpawnInterval;
             
             if (spawnOnStart && archetype != null)
@@ -59,6 +90,12 @@ namespace ButterflyHouse.Butterflies
         {
             if (archetype == null || ButterflyManager.Instance == null)
                 return;
+            
+            // Update base spawn interval if stage changed
+            if (scaleSpawnIntervalWithStage)
+            {
+                UpdateBaseSpawnIntervalForStage();
+            }
             
             // Update spawn interval based on population maintenance
             if (adjustSpawnRateForPopulation)
@@ -100,6 +137,48 @@ namespace ButterflyHouse.Butterflies
         }
         
         /// <summary>
+        /// Update base spawn interval based on current progression stage.
+        /// </summary>
+        private void UpdateBaseSpawnIntervalForStage()
+        {
+            if (EcosystemStateController.Instance == null) return;
+            
+            int currentStage = EcosystemStateController.Instance.ProgressionStage;
+            float targetBaseInterval = baseSpawnInterval;
+            
+            switch (currentStage)
+            {
+                case 0:
+                    targetBaseInterval = spawnIntervalStage0;
+                    break;
+                case 1:
+                    targetBaseInterval = spawnIntervalStage1;
+                    break;
+                case 2:
+                    targetBaseInterval = spawnIntervalStage2;
+                    break;
+                case 3:
+                    targetBaseInterval = spawnIntervalStage3;
+                    break;
+                case 4:
+                    targetBaseInterval = spawnIntervalStage4;
+                    break;
+                case 5:
+                    targetBaseInterval = spawnIntervalStage5;
+                    break;
+                default:
+                    targetBaseInterval = spawnIntervalStage0;
+                    break;
+            }
+            
+            // Only update if changed (to avoid unnecessary updates)
+            if (Mathf.Abs(baseSpawnInterval - targetBaseInterval) > 0.1f)
+            {
+                baseSpawnInterval = targetBaseInterval;
+            }
+        }
+        
+        /// <summary>
         /// Adjust spawn interval based on current population vs target.
         /// Spawns faster when population is below target, slower when at or above target.
         /// </summary>
@@ -111,8 +190,10 @@ namespace ButterflyHouse.Butterflies
             
             if (ButterflyManager.Instance.ShouldSpawnForMaintenance)
             {
-                // Population is below target - spawn faster
-                targetInterval = minSpawnInterval;
+                // Population is below target - spawn faster, but not faster than base interval * 0.5
+                // This prevents too-rapid spawning in early stages
+                float fastInterval = Mathf.Min(minSpawnInterval, baseSpawnInterval * 0.5f);
+                targetInterval = fastInterval;
             }
             else
             {

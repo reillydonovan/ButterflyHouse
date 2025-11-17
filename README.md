@@ -112,18 +112,21 @@ The experience evolves through 5 stages:
 
 **Stage 0: Emergence** (Starting State)
 - Basic butterflies spawn from chrysalises
+- **Population**: 20 butterflies
 - Minimal plants in sprout form
 - Low audio density, thin trails
 - *Unlocks*: 45 seconds elapsed OR first butterfly landing
 
 **Stage 1: Expansion**
 - More butterfly archetypes appear
+- **Population**: 30 butterflies
 - Trails become more luminescent
 - Plants begin responding to your presence
 - *Unlocks*: Harmony > 20 AND Serenity > 15
 
 **Stage 2: Symbiosis**
 - Butterflies "pollinate" plants on landing
+- **Population**: 50 butterflies
 - Plants glow where touched
 - New visual bloom patterns emerge
 - Audio gains subtle harmonics
@@ -131,6 +134,7 @@ The experience evolves through 5 stages:
 
 **Stage 3: Emergent Ecology**
 - New plant types appear procedurally
+- **Population**: 75 butterflies
 - Butterflies flock in synchronized patterns
 - Noise-based wind currents become visible
 - Trails thicken and persist longer
@@ -138,6 +142,7 @@ The experience evolves through 5 stages:
 
 **Stage 4: Synesthetic Overgrowth**
 - Ambient lighting cycles (Dawn/Noon/Dusk/Midnight)
+- **Population**: 150 butterflies
 - Butterflies shift into waveform-mode more often
 - Plants generate chords instead of single notes
 - Space feels alive and self-transforming
@@ -145,6 +150,7 @@ The experience evolves through 5 stages:
 
 **Stage 5: Ascension** (Final State)
 - The sanctuary reaches its "final form"
+- **Population**: **250 butterflies** (hundreds fill the sanctuary)
 - Giant chrysalis events can occur
 - Butterfly choir formations (synchronized audio)
 - Environment can temporarily dissolve into pure waveforms
@@ -172,6 +178,34 @@ The experience evolves through 5 stages:
   - Falls back to any plant/flower/fruit if life-extending targets aren't available
 - **Death Process**: After landing, butterfly completes its landing duration, then peacefully dissipates
 - **Lifetime Tracking**: System tracks fruit feeding count and pollination count for each butterfly
+
+#### Population System
+- **Stage-Based Scaling**: Butterfly population scales dynamically with progression stages:
+  - **Stage 0 (Emergence)**: 20 butterflies - Gentle introduction to the ecosystem
+  - **Stage 1 (Expansion)**: 30 butterflies - More variety and movement
+  - **Stage 2 (Symbiosis)**: 50 butterflies - Active pollination and interaction
+  - **Stage 3 (Emergent Ecology)**: 75 butterflies - Flocking behaviors emerge
+  - **Stage 4 (Synesthetic Overgrowth)**: 150 butterflies - Dense, vibrant ecosystem
+  - **Stage 5 (Ascension)**: **250 butterflies** - Hundreds fill the sanctuary
+- **Population Maintenance**:
+  - System automatically maintains steady population at each stage
+  - Monitors population every 5 seconds
+  - Maintains target of 70% of max population minimum
+  - Chrysalises adjust spawn rate dynamically based on population
+- **Dynamic Spawn Rate**:
+  - **Fast Spawn** (5s interval): When population is below target (70% of max)
+  - **Normal Spawn** (20s interval): When population is at target
+  - **Slow Spawn** (up to 30s interval): When population is at capacity
+  - Chrysalises can spawn early (at 50% of interval) if maintenance is needed
+  - Smooth transitions between spawn rates for natural flow
+- **Continuous Spawning**: 
+  - Chrysalises continue to pulse and prepare butterflies even when at max capacity
+  - Ready to spawn immediately when space opens up
+  - Ensures steady population throughout the experience
+- **Population Tracking**: 
+  - System tracks current population vs target for each stage
+  - Automatically scales up when progression stage advances
+  - Logs population status for debugging
 
 #### Flight Patterns
 - **Orbital Motion**: Butterflies orbit around central points with variable radii
@@ -705,6 +739,8 @@ Butterflies use procedural flight paths:
 - **Energy-based behavior**: Low-energy butterflies prioritize fruits and flowers
 - **Lifetime system**: Butterflies live 5-30 minutes (random), extended by feeding on fruits (+60s) and pollinating flowers (+45s)
 - **Final landing behavior**: Butterflies must land before dying (cannot die mid-flight), actively seek landing 30 seconds before death
+- **Population scaling**: Butterfly population scales with progression stages (20 → 30 → 50 → 75 → 150 → 250 butterflies)
+- **Dynamic spawning**: Chrysalises adjust spawn rate based on population (fast when low, slow when full)
 
 ### Audio System
 - **Per-butterfly audio voices** that modulate based on movement
@@ -774,7 +810,11 @@ Edit `EcosystemStateController.cs` to modify:
 ### Butterflies Not Spawning
 - Verify chrysalises have `ButterflyArchetype` assigned
 - Check `ButterflyManager` has butterfly prefab assigned
-- Ensure `maxButterflies` setting is not 0
+- Ensure `currentMaxButterflies` is not 0 (should scale with progression stage automatically)
+- Check if population is at capacity - chrysalises will spawn when butterflies die and space opens up
+- Verify `scalePopulationWithStage` is enabled in `ButterflyManager` for dynamic population scaling
+- Check console logs for population maintenance status (population should maintain at 70% of max minimum)
+- Population scales automatically with progression: 20 → 30 → 50 → 75 → 150 → 250 butterflies
 
 ## 📚 Documentation
 

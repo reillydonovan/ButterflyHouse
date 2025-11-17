@@ -60,6 +60,12 @@ namespace ButterflyHouse.Butterflies
         [SerializeField] private float breakOutChance = 0.1f;
         [SerializeField] private float breakOutCheckInterval = 3f;
         [SerializeField] private float maxFlockTime = 30f;
+        [Header("Flocking Cooldown")]
+        [SerializeField] private bool enableFlockingCooldown = true;
+        [Range(5f, 60f)]
+        [SerializeField] private float minFlockingCooldown = 10f; // Minimum cooldown after leaving flock
+        [Range(10f, 120f)]
+        [SerializeField] private float maxFlockingCooldown = 30f; // Maximum cooldown after leaving flock
         
         [Header("Debug")]
         [SerializeField] private bool enableDebugLogs = true; // Enabled by default for debugging
@@ -99,6 +105,7 @@ namespace ButterflyHouse.Butterflies
         private float _flockBlendFactor = 0f;
         private float _flockStartTime = 0f;
         private float _breakOutCheckTimer = 0f;
+        private float _flockingCooldownEndTime = 0f; // When the butterfly can re-enter a flock
         private Vector3 _flockVelocity = Vector3.zero;
         private readonly List<Butterfly> _nearbyButterflies = new List<Butterfly>();
         
@@ -449,62 +456,74 @@ namespace ButterflyHouse.Butterflies
             
             if (enableFlocking && _currentState == State.Flying)
             {
-                shouldFlock = CheckForFlocking();
+                // Check if cooldown has expired before allowing flocking
+                bool canFlock = !enableFlockingCooldown || Time.time >= _flockingCooldownEndTime;
                 
-                // Check for breaking out of flock first
-                if (_isInFlock)
+                if (canFlock)
                 {
-                    CheckForBreakOut();
+                    shouldFlock = CheckForFlocking();
                     
-                    // Re-check if we should still flock after breakout check
-                    shouldFlock = CheckForFlocking() && _isInFlock;
-                }
-                
-                if (shouldFlock || _isInFlock)
-                {
-                    flockDir = CalculateFlockingDirection();
-                    
-                    // Only use flock direction if it's valid (not zero)
-                    if (flockDir.sqrMagnitude > 0.01f)
+                    // Check for breaking out of flock first
+                    if (_isInFlock)
                     {
-                        hasValidFlockDir = true;
+                        CheckForBreakOut();
                         
-                        // Blend into flock
-                        if (!_isInFlock)
+                        // Re-check if we should still flock after breakout check
+                        shouldFlock = CheckForFlocking() && _isInFlock;
+                    }
+                    
+                    if (shouldFlock || _isInFlock)
+                    {
+                        flockDir = CalculateFlockingDirection();
+                        
+                        // Only use flock direction if it's valid (not zero)
+                        if (flockDir.sqrMagnitude > 0.01f)
                         {
-                            _isInFlock = true;
-                            _flockStartTime = Time.time;
-                            if (enableDebugLogs)
-                                Debug.Log($"[Butterfly] {gameObject.name}: JOINED FLOCK (nearby: {_nearbyButterflies.Count})");
+                            hasValidFlockDir = true;
+                            
+                            // Blend into flock
+                            if (!_isInFlock)
+                            {
+                                _isInFlock = true;
+                                _flockStartTime = Time.time;
+                                if (enableDebugLogs)
+                                    Debug.Log($"[Butterfly] {gameObject.name}: JOINED FLOCK (nearby: {_nearbyButterflies.Count})");
+                            }
+                            
+                            _flockBlendFactor = Mathf.Lerp(_flockBlendFactor, 1f, Time.deltaTime * flockBlendSpeed);
                         }
-                        
-                        _flockBlendFactor = Mathf.Lerp(_flockBlendFactor, 1f, Time.deltaTime * flockBlendSpeed);
+                        else
+                        {
+                            // Invalid flock direction, break out
+                            hasValidFlockDir = false;
+                            if (_isInFlock)
+                            {
+                                ExitFlock("invalid direction");
+                            }
+                            _flockBlendFactor = Mathf.Lerp(_flockBlendFactor, 0f, Time.deltaTime * flockBlendSpeed * 2f);
+                        }
                     }
                     else
                     {
-                        // Invalid flock direction, break out
+                        // Blend out of flock
                         hasValidFlockDir = false;
-                        if (_isInFlock)
-                        {
-                            if (enableDebugLogs)
-                                Debug.Log($"[Butterfly] {gameObject.name}: LEFT FLOCK (invalid direction, dir={flockDir:F3})");
-                        }
-                        _isInFlock = false;
                         _flockBlendFactor = Mathf.Lerp(_flockBlendFactor, 0f, Time.deltaTime * flockBlendSpeed * 2f);
+                        
+                        if (_flockBlendFactor < 0.1f && _isInFlock)
+                        {
+                            ExitFlock("no nearby butterflies");
+                        }
                     }
                 }
                 else
                 {
-                    // Blend out of flock
+                    // In cooldown period - blend out if currently in flock (shouldn't happen, but safety check)
+                    if (_isInFlock)
+                    {
+                        ExitFlock("cooldown active");
+                    }
                     hasValidFlockDir = false;
                     _flockBlendFactor = Mathf.Lerp(_flockBlendFactor, 0f, Time.deltaTime * flockBlendSpeed * 2f);
-                    
-                    if (_flockBlendFactor < 0.1f && _isInFlock)
-                    {
-                        _isInFlock = false;
-                        if (enableDebugLogs)
-                            Debug.Log($"[Butterfly] {gameObject.name}: LEFT FLOCK (no nearby butterflies)");
-                    }
                 }
             }
             else
@@ -512,9 +531,7 @@ namespace ButterflyHouse.Butterflies
                 // Flocking disabled or not flying, ensure we're not in flock
                 if (_isInFlock)
                 {
-                    _isInFlock = false;
-                    if (enableDebugLogs)
-                        Debug.Log($"[Butterfly] {gameObject.name}: LEFT FLOCK (flocking disabled or not flying)");
+                    ExitFlock("flocking disabled or not flying");
                 }
                 _flockBlendFactor = 0f;
             }
@@ -788,6 +805,33 @@ namespace ButterflyHouse.Butterflies
         }
         
         /// <summary>
+        /// Exit flock and set cooldown timer to prevent immediate re-entry.
+        /// </summary>
+        private void ExitFlock(string reason)
+        {
+            if (!_isInFlock) return; // Already out of flock
+            
+            _isInFlock = false;
+            _flockStartTime = 0f;
+            _flockBlendFactor = Mathf.Max(0f, _flockBlendFactor * 0.5f); // Quick drop
+            
+            // Set cooldown timer to prevent immediate re-entry
+            if (enableFlockingCooldown)
+            {
+                float cooldownDuration = Random.Range(minFlockingCooldown, maxFlockingCooldown);
+                _flockingCooldownEndTime = Time.time + cooldownDuration;
+                
+                if (enableDebugLogs)
+                    Debug.Log($"[Butterfly] {gameObject.name}: LEFT FLOCK ({reason}). Cooldown: {cooldownDuration:F1}s (ends at {_flockingCooldownEndTime:F1})");
+            }
+            else
+            {
+                if (enableDebugLogs)
+                    Debug.Log($"[Butterfly] {gameObject.name}: LEFT FLOCK ({reason})");
+            }
+        }
+        
+        /// <summary>
         /// Check if butterfly should break out of the flock.
         /// </summary>
         private void CheckForBreakOut()
@@ -802,12 +846,8 @@ namespace ButterflyHouse.Butterflies
             if (distanceBreakOut)
             {
                 // Immediately break out if no nearby butterflies
-                _isInFlock = false;
-                _flockStartTime = 0f;
-                _flockBlendFactor = Mathf.Max(0f, _flockBlendFactor * 0.5f); // Quick drop
+                ExitFlock("distance - no nearby");
                 _breakOutCheckTimer = 0f;
-                if (enableDebugLogs)
-                    Debug.Log($"[Butterfly] {gameObject.name}: BROKE OUT of flock (distance - no nearby)");
                 return;
             }
             
@@ -827,11 +867,8 @@ namespace ButterflyHouse.Butterflies
                 if (randomBreakOut || timeBreakOut)
                 {
                     // Break out of flock
-                    _isInFlock = false;
-                    _flockStartTime = 0f;
-                    _flockBlendFactor = Mathf.Max(0f, _flockBlendFactor * 0.5f); // Quick drop
-                    if (enableDebugLogs)
-                        Debug.Log($"[Butterfly] {gameObject.name}: BROKE OUT of flock (random={randomBreakOut}, time={timeBreakOut}, timeInFlock={timeInFlock:F1}s)");
+                    string reason = $"random={randomBreakOut}, time={timeBreakOut}, timeInFlock={timeInFlock:F1}s";
+                    ExitFlock(reason);
                 }
             }
         }
