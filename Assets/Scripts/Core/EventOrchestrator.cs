@@ -9,16 +9,17 @@ namespace ButterflyHouse.Core
     /// </summary>
     public class EventOrchestrator : MonoBehaviour
     {
-        public enum EventType
-        {
-            None,
-            ButterflyEclipse,
-            HarmonicRain,
-            ChromaticStorm,
-            GreatChrysalis,      // Stage 5 only
-            ButterflyChoir,      // Stage 5 only
-            DissolutionIntoFrequency // Stage 5 only
-        }
+    public enum EventType
+    {
+        None,
+        ButterflyEclipse,
+        HarmonicRain,
+        ChromaticStorm,
+        FruitBloom,          // Stage 3+ only - all fruits glow and play
+        GreatChrysalis,      // Stage 5 only
+        ButterflyChoir,      // Stage 5 only
+        DissolutionIntoFrequency // Stage 5 only
+    }
         
         [Header("Event Timing")]
         [SerializeField] private float timeSinceLastEvent = 0f;
@@ -132,6 +133,12 @@ namespace ButterflyHouse.Core
                 available.Add(EventType.ChromaticStorm);
             }
             
+            // Fruit Bloom - Stage 3+
+            if (currentStage >= 3)
+            {
+                available.Add(EventType.FruitBloom);
+            }
+            
             return available.ToArray();
         }
         
@@ -163,6 +170,10 @@ namespace ButterflyHouse.Core
                     
                 case EventType.ChromaticStorm:
                     yield return StartCoroutine(ChromaticStormEvent());
+                    break;
+                    
+                case EventType.FruitBloom:
+                    yield return StartCoroutine(FruitBloomEvent());
                     break;
                     
                 case EventType.GreatChrysalis:
@@ -245,6 +256,76 @@ namespace ButterflyHouse.Core
                 // Update audio
                 yield return null;
             }
+        }
+        
+        private IEnumerator FruitBloomEvent()
+        {
+            Debug.Log("Fruit Bloom: All fruits begin glowing simultaneously, chord spreads across sanctuary");
+            
+            // Trigger fruit bloom in FruitManager
+            if (Plants.FruitManager.Instance != null)
+            {
+                Plants.FruitManager.Instance.TriggerFruitBloom();
+            }
+            
+            // Butterflies rush to fruit zones
+            // Plants sway in synchronized resonance
+            
+            float duration = 45f;
+            float elapsed = 0f;
+            
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                
+                // Animate fruit pulsing
+                // Trigger butterfly attraction to fruits
+                // Synchronize plant swaying
+                
+                yield return null;
+            }
+            
+            Debug.Log("Fruit Bloom event completed");
+        }
+        
+        /// <summary>
+        /// Called when progression stage changes.
+        /// </summary>
+        public void OnProgressionStageChanged(int newStage)
+        {
+            Debug.Log($"EventOrchestrator: Progression stage changed to {newStage}");
+            
+            // Stage 5 triggers ascension sequence
+            if (newStage == 5)
+            {
+                TriggerAscensionSequence();
+            }
+        }
+        
+        private void TriggerAscensionSequence()
+        {
+            Debug.Log("Triggering Ascension Sequence: Great Chrysalis + Butterfly Choir + Dissolution");
+            
+            // Trigger ascension events in sequence
+            StartCoroutine(AscensionSequenceCoroutine());
+        }
+        
+        private System.Collections.IEnumerator AscensionSequenceCoroutine()
+        {
+            // Great Chrysalis
+            yield return StartCoroutine(GreatChrysalisEvent());
+            
+            // Small delay
+            yield return new WaitForSeconds(5f);
+            
+            // Butterfly Choir
+            yield return StartCoroutine(ButterflyChoirEvent());
+            
+            // Small delay
+            yield return new WaitForSeconds(5f);
+            
+            // Dissolution Into Pure Frequency
+            yield return StartCoroutine(DissolutionIntoFrequencyEvent());
         }
         
         private IEnumerator GreatChrysalisEvent()

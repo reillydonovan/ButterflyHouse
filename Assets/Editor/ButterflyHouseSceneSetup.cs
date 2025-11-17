@@ -136,6 +136,53 @@ namespace ButterflyHouse.Editor
             GameObject butterflyManagerObj = new GameObject("ButterflyManager");
             ButterflyManager butterflyManager = butterflyManagerObj.AddComponent<ButterflyManager>();
             
+            // Configure ButterflyManager bounding box via SerializedObject
+            SerializedObject butterflyManagerSO = new SerializedObject(butterflyManager);
+            SerializedProperty useBoundingBoxProp = butterflyManagerSO.FindProperty("useBoundingBox");
+            if (useBoundingBoxProp != null)
+            {
+                useBoundingBoxProp.boolValue = true;
+            }
+            SerializedProperty boundingBoxMinProp = butterflyManagerSO.FindProperty("boundingBoxMin");
+            if (boundingBoxMinProp != null)
+            {
+                boundingBoxMinProp.vector3Value = new Vector3(-10f, 0f, -10f);
+            }
+            SerializedProperty boundingBoxMaxProp = butterflyManagerSO.FindProperty("boundingBoxMax");
+            if (boundingBoxMaxProp != null)
+            {
+                boundingBoxMaxProp.vector3Value = new Vector3(10f, 5f, 10f);
+            }
+            SerializedProperty boundarySteerStrengthProp = butterflyManagerSO.FindProperty("boundarySteerStrength");
+            if (boundarySteerStrengthProp != null)
+            {
+                boundarySteerStrengthProp.floatValue = 2f;
+            }
+            SerializedProperty boundaryBufferZoneProp = butterflyManagerSO.FindProperty("boundaryBufferZone");
+            if (boundaryBufferZoneProp != null)
+            {
+                boundaryBufferZoneProp.floatValue = 1f;
+            }
+            SerializedProperty surfaceAvoidanceStrengthProp = butterflyManagerSO.FindProperty("surfaceAvoidanceStrength");
+            if (surfaceAvoidanceStrengthProp != null)
+            {
+                surfaceAvoidanceStrengthProp.floatValue = 5f;
+            }
+            SerializedProperty groundUpwardBiasProp = butterflyManagerSO.FindProperty("groundUpwardBias");
+            if (groundUpwardBiasProp != null)
+            {
+                groundUpwardBiasProp.floatValue = 3f;
+            }
+            butterflyManagerSO.ApplyModifiedProperties();
+            
+            // Create PlantManager
+            GameObject plantManagerObj = new GameObject("PlantManager");
+            Plants.PlantManager plantManager = plantManagerObj.AddComponent<Plants.PlantManager>();
+            
+            // Create FruitManager
+            GameObject fruitManagerObj = new GameObject("FruitManager");
+            Plants.FruitManager fruitManager = fruitManagerObj.AddComponent<Plants.FruitManager>();
+            
             // Create AudioManager
             GameObject audioManagerObj = new GameObject("AudioManager");
             AudioManager audioManager = audioManagerObj.AddComponent<AudioManager>();
@@ -168,6 +215,77 @@ namespace ButterflyHouse.Editor
             Core.LightCycle lightCycle = lightCycleObj.AddComponent<Core.LightCycle>();
             lightCycleObj.transform.SetParent(ecosystemStateObj.transform);
             
+            // Create EcosystemOrchestrator (central brain)
+            GameObject orchestratorObj = new GameObject("EcosystemOrchestrator");
+            Core.EcosystemOrchestrator orchestrator = orchestratorObj.AddComponent<Core.EcosystemOrchestrator>();
+            
+            // Link EcosystemOrchestrator to all subsystems
+            SerializedObject orchestratorSO = new SerializedObject(orchestrator);
+            SerializedProperty ecosystemStateProp = orchestratorSO.FindProperty("ecosystemState");
+            if (ecosystemStateProp != null)
+            {
+                ecosystemStateProp.objectReferenceValue = ecosystemStateController;
+            }
+            SerializedProperty progressionStageManagerProp = orchestratorSO.FindProperty("progressionStageManager");
+            if (progressionStageManagerProp != null)
+            {
+                progressionStageManagerProp.objectReferenceValue = stageManager;
+            }
+            SerializedProperty butterflyManagerProp = orchestratorSO.FindProperty("butterflyManager");
+            if (butterflyManagerProp != null)
+            {
+                butterflyManagerProp.objectReferenceValue = butterflyManager;
+            }
+            SerializedProperty fruitManagerProp = orchestratorSO.FindProperty("fruitManager");
+            if (fruitManagerProp != null)
+            {
+                fruitManagerProp.objectReferenceValue = fruitManager;
+            }
+            SerializedProperty plantManagerProp = orchestratorSO.FindProperty("plantManager");
+            if (plantManagerProp != null)
+            {
+                plantManagerProp.objectReferenceValue = plantManager;
+            }
+            SerializedProperty handAuraManagerProp = orchestratorSO.FindProperty("handAuraManager");
+            if (handAuraManagerProp != null)
+            {
+                handAuraManagerProp.objectReferenceValue = handAuraSystem;
+            }
+            SerializedProperty eventOrchestratorProp = orchestratorSO.FindProperty("eventOrchestrator");
+            if (eventOrchestratorProp != null)
+            {
+                eventOrchestratorProp.objectReferenceValue = eventOrchestrator;
+            }
+            
+            // Set up dummy hand transforms if not in VR (will be replaced by actual hand tracking)
+            GameObject headTransformObj = new GameObject("HeadTransform");
+            headTransformObj.transform.SetParent(orchestratorObj.transform);
+            SerializedProperty headTransformProp = orchestratorSO.FindProperty("headTransform");
+            if (headTransformProp != null)
+            {
+                headTransformProp.objectReferenceValue = mainCamera != null ? mainCamera.transform : headTransformObj.transform;
+            }
+            
+            GameObject leftHandObj = new GameObject("LeftHandTransform");
+            leftHandObj.transform.SetParent(orchestratorObj.transform);
+            leftHandObj.transform.position = new Vector3(-0.3f, 1.5f, 0.5f);
+            SerializedProperty leftHandProp = orchestratorSO.FindProperty("leftHandTransform");
+            if (leftHandProp != null)
+            {
+                leftHandProp.objectReferenceValue = leftHandObj.transform;
+            }
+            
+            GameObject rightHandObj = new GameObject("RightHandTransform");
+            rightHandObj.transform.SetParent(orchestratorObj.transform);
+            rightHandObj.transform.position = new Vector3(0.3f, 1.5f, 0.5f);
+            SerializedProperty rightHandProp = orchestratorSO.FindProperty("rightHandTransform");
+            if (rightHandProp != null)
+            {
+                rightHandProp.objectReferenceValue = rightHandObj.transform;
+            }
+            
+            orchestratorSO.ApplyModifiedProperties();
+            
             // Link systems
             SerializedObject ecosystemSO = new SerializedObject(ecosystemStateController);
             SerializedProperty handAuraProp = ecosystemSO.FindProperty("handAuraSystem");
@@ -194,10 +312,10 @@ namespace ButterflyHouse.Editor
             
             // Link stage manager to ecosystem state controller
             SerializedObject stageSO = new SerializedObject(stageManager);
-            SerializedProperty butterflyManagerProp = stageSO.FindProperty("butterflyManager");
-            if (butterflyManagerProp != null)
+            SerializedProperty stageButterflyManagerProp = stageSO.FindProperty("butterflyManager");
+            if (stageButterflyManagerProp != null)
             {
-                butterflyManagerProp.objectReferenceValue = butterflyManager;
+                stageButterflyManagerProp.objectReferenceValue = butterflyManager;
             }
             stageSO.ApplyModifiedProperties();
             
@@ -270,6 +388,17 @@ namespace ButterflyHouse.Editor
                 );
             }
             
+            // Create sample Flower objects (spawn some on plants)
+            for (int i = 0; i < 3; i++)
+            {
+                GameObject flowerObj = CreateFlowerObject();
+                flowerObj.transform.position = new Vector3(
+                    Random.Range(-4f, 4f),
+                    Random.Range(1f, 2f),
+                    Random.Range(-4f, 4f)
+                );
+            }
+            
             // Create sample LandingTarget objects
             for (int i = 0; i < 3; i++)
             {
@@ -311,6 +440,13 @@ namespace ButterflyHouse.Editor
             {
                 if (child.name.StartsWith("GenerativeFruit"))
                     child.transform.SetParent(fruitsParent.transform);
+            }
+            
+            GameObject flowersParent = new GameObject("Flowers");
+            foreach (GameObject child in scene.GetRootGameObjects())
+            {
+                if (child.name.StartsWith("Flower"))
+                    child.transform.SetParent(flowersParent.transform);
             }
             
             // Mark scene as dirty and save
@@ -599,6 +735,8 @@ namespace ButterflyHouse.Editor
             
             // Add components
             Plants.GenerativeFruit fruit = fruitObj.AddComponent<Plants.GenerativeFruit>();
+            Plants.FruitGrowthSystem growthSystem = fruitObj.AddComponent<Plants.FruitGrowthSystem>();
+            Plants.FruitVisualController visualController = fruitObj.AddComponent<Plants.FruitVisualController>();
             AudioSource audioSource = fruitObj.AddComponent<AudioSource>();
             
             // Configure AudioSource
@@ -656,6 +794,80 @@ namespace ButterflyHouse.Editor
             fruitSO.ApplyModifiedProperties();
             
             return fruitObj;
+        }
+        
+        private static GameObject CreateFlowerObject()
+        {
+            GameObject flowerObj = new GameObject("Flower");
+            
+            // Add mesh (sphere for flower head)
+            GameObject flowerMesh = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            flowerMesh.name = "FlowerHead";
+            flowerMesh.transform.SetParent(flowerObj.transform);
+            flowerMesh.transform.localPosition = Vector3.zero;
+            flowerMesh.transform.localScale = Vector3.one * 0.25f;
+            
+            // Add components
+            Flowers.Flower flowerComponent = flowerObj.AddComponent<Flowers.Flower>();
+            Flowers.FlowerVisualController visualController = flowerObj.AddComponent<Flowers.FlowerVisualController>();
+            AudioSource audioSource = flowerObj.AddComponent<AudioSource>();
+            
+            // Configure AudioSource
+            audioSource.playOnAwake = false;
+            audioSource.loop = false;
+            audioSource.spatialBlend = 1f;
+            
+            // Set material
+            Shader flowerShader = GetLitShader();
+            Material flowerMat = CreateMaterial(flowerShader, "FlowerMaterial");
+            
+            // Random flower color
+            Color[] flowerColors = new Color[]
+            {
+                new Color(1f, 0.4f, 0.6f, 1f), // Pink
+                new Color(1f, 0.8f, 0.2f, 1f), // Yellow
+                new Color(0.8f, 0.3f, 0.9f, 1f), // Purple
+                new Color(1f, 0.2f, 0.2f, 1f), // Red
+                new Color(1f, 0.6f, 0.8f, 1f), // Light Pink
+                new Color(0.9f, 0.9f, 0.3f, 1f), // Light Yellow
+            };
+            Color flowerColorValue = flowerColors[Random.Range(0, flowerColors.Length)];
+            
+            flowerMat.color = flowerColorValue;
+            if (flowerMat.HasProperty("_Metallic"))
+                flowerMat.SetFloat("_Metallic", 0.1f);
+            if (flowerMat.HasProperty("_Smoothness"))
+                flowerMat.SetFloat("_Smoothness", 0.5f);
+            else if (flowerMat.HasProperty("_Glossiness"))
+                flowerMat.SetFloat("_Glossiness", 0.5f);
+            
+            flowerMesh.GetComponent<Renderer>().material = flowerMat;
+            
+            // Set up Flower component via SerializedObject
+            SerializedObject flowerSO = new SerializedObject(flowerComponent);
+            SerializedProperty createLandingProp = flowerSO.FindProperty("createLandingTarget");
+            if (createLandingProp != null)
+            {
+                createLandingProp.boolValue = true;
+            }
+            SerializedProperty landingZoneProp = flowerSO.FindProperty("landingZoneRadius");
+            if (landingZoneProp != null)
+            {
+                landingZoneProp.floatValue = 0.3f;
+            }
+            SerializedProperty nectarValueProp = flowerSO.FindProperty("nectarValue");
+            if (nectarValueProp != null)
+            {
+                nectarValueProp.floatValue = 0.5f;
+            }
+            SerializedProperty pollenYieldProp = flowerSO.FindProperty("pollenYield");
+            if (pollenYieldProp != null)
+            {
+                pollenYieldProp.floatValue = 0.5f;
+            }
+            flowerSO.ApplyModifiedProperties();
+            
+            return flowerObj;
         }
     }
 }

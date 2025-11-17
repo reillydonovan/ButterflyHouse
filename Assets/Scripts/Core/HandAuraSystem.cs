@@ -337,6 +337,29 @@ namespace ButterflyHouse.Core
             // Connect butterflies with ribbon of light
         }
         
+        /// <summary>
+        /// Update from serenity level (called by EcosystemOrchestrator).
+        /// </summary>
+        public void UpdateFromSerenity(float serenity)
+        {
+            // Gesture Spellbook unlocks at high serenity (serenity > 50)
+            if (serenity > 50f && currentAuraLevel < AuraLevel.GestureSpellbook)
+            {
+                SetAuraLevel(AuraLevel.GestureSpellbook);
+            }
+        }
+        
+        /// <summary>
+        /// Called when progression stage changes.
+        /// </summary>
+        public void OnProgressionStageChanged(int newStage)
+        {
+            Debug.Log($"HandAuraSystem: Progression stage changed to {newStage}");
+            
+            // Stage-specific aura behaviors can be added here
+            // For example: enhance aura visuals, unlock gestures, etc.
+        }
+        
         public AuraLevel CurrentAuraLevel => currentAuraLevel;
     }
 }

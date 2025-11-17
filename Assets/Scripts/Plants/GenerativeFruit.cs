@@ -26,10 +26,13 @@ namespace ButterflyHouse.Plants
         
         [Header("Audio")]
         [SerializeField] private AudioClip[] landingClips;
+        [SerializeField] private AudioClip[] melodicClips; // Stage-based melodic clips
         [SerializeField] private AudioSource audioSource;
         [Range(0f, 1f)]
         [SerializeField] private float audioVolume = 0.6f;
         [SerializeField] private bool playOnButterflyLand = true;
+        [SerializeField] private bool playMelodyContinuously = false;
+        [SerializeField] private float melodyPlayInterval = 5f;
         
         [Header("Feeding")]
         [SerializeField] private bool canBeConsumed = false;
@@ -37,11 +40,20 @@ namespace ButterflyHouse.Plants
         [SerializeField] private float consumptionTime = 5f;
         [SerializeField] private GameObject consumableVisual;
         
+        [Header("Energy Output")]
+        [SerializeField] private float energyOutput = 0.5f; // Energy given per second to butterflies
+        [SerializeField] private float resonanceFieldRadius = 5f; // Radius of energy field
+        
+        [Header("Stage")]
+        [SerializeField] private FruitGrowthSystem fruitGrowthSystem;
+        
         private MaterialPropertyBlock _mpb;
         private float _glowPhase = 0f;
         private float _currentGlow = 0f;
         private bool _isBeingConsumed = false;
         private float _consumptionTimer = 0f;
+        private float _melodyTimer = 0f;
+        private FruitGrowthSystem.FruitStage _currentStage = FruitGrowthSystem.FruitStage.Seed;
         
         private void Awake()
         {
@@ -68,6 +80,38 @@ namespace ButterflyHouse.Plants
             if (createLandingTarget && landingTarget == null)
             {
                 CreateLandingTarget();
+            }
+            
+            // Get fruit growth system
+            if (fruitGrowthSystem == null)
+                fruitGrowthSystem = GetComponent<FruitGrowthSystem>();
+            
+            // Subscribe to stage changes
+            if (fruitGrowthSystem != null)
+            {
+                fruitGrowthSystem.OnStageChanged += OnFruitStageChanged;
+                _currentStage = fruitGrowthSystem.CurrentStage;
+            }
+            
+            // Register with FruitManager
+            if (FruitManager.Instance != null)
+            {
+                FruitManager.Instance.RegisterFruit(this);
+            }
+        }
+        
+        private void OnDestroy()
+        {
+            // Unregister from FruitManager
+            if (FruitManager.Instance != null)
+            {
+                FruitManager.Instance.UnregisterFruit(this);
+            }
+            
+            // Unsubscribe from stage changes
+            if (fruitGrowthSystem != null)
+            {
+                fruitGrowthSystem.OnStageChanged -= OnFruitStageChanged;
             }
         }
         
@@ -102,6 +146,103 @@ namespace ButterflyHouse.Plants
                     float consumptionProgress = _consumptionTimer / consumptionTime;
                     UpdateConsumptionVisual(consumptionProgress);
                 }
+            }
+            
+            // Play continuous melody based on stage
+            if (playMelodyContinuously && _currentStage != FruitGrowthSystem.FruitStage.Seed)
+            {
+                _melodyTimer += Time.deltaTime;
+                
+                if (_melodyTimer >= melodyPlayInterval && melodicClips != null && melodicClips.Length > 0 && audioSource != null && !audioSource.isPlaying)
+                {
+                    PlayMelody();
+                    _melodyTimer = 0f;
+                }
+            }
+            
+            // Update energy output based on stage
+            UpdateEnergyOutput();
+        }
+        
+        private void UpdateEnergyOutput()
+        {
+            // Energy output increases with stage
+            float baseEnergy = 0.5f;
+            switch (_currentStage)
+            {
+                case FruitGrowthSystem.FruitStage.Seed:
+                    energyOutput = 0.2f; // Low - butterflies can detect but cannot feed
+                    break;
+                    
+                case FruitGrowthSystem.FruitStage.Harmonic:
+                    energyOutput = baseEnergy; // Normal
+                    break;
+                    
+                case FruitGrowthSystem.FruitStage.Resonant:
+                    energyOutput = baseEnergy * 1.5f; // Higher
+                    break;
+                    
+                case FruitGrowthSystem.FruitStage.Celestial:
+                    energyOutput = baseEnergy * 2f; // Maximum
+                    break;
+            }
+        }
+        
+        /// <summary>
+        /// Play a melodic clip based on stage.
+        /// </summary>
+        public void PlayMelody()
+        {
+            if (audioSource == null || melodicClips == null || melodicClips.Length == 0) return;
+            
+            AudioClip clip = melodicClips[Random.Range(0, melodicClips.Length)];
+            if (clip != null)
+            {
+                float volume = audioVolume;
+                if (Core.Settings.Instance != null)
+                {
+                    volume *= Core.Settings.Instance.plantVolume;
+                }
+                audioSource.PlayOneShot(clip, volume);
+            }
+        }
+        
+        private void OnFruitStageChanged(FruitGrowthSystem.FruitStage stage)
+        {
+            _currentStage = stage;
+            
+            // Update visual controller
+            FruitVisualController visualController = GetComponent<FruitVisualController>();
+            if (visualController != null)
+            {
+                visualController.OnStageChanged(stage);
+            }
+            
+            // Update audio properties based on stage
+            UpdateAudioForStage(stage);
+        }
+        
+        private void UpdateAudioForStage(FruitGrowthSystem.FruitStage stage)
+        {
+            // Update melody play interval based on stage
+            switch (stage)
+            {
+                case FruitGrowthSystem.FruitStage.Seed:
+                    melodyPlayInterval = 10f; // Slow, single tones
+                    break;
+                    
+                case FruitGrowthSystem.FruitStage.Harmonic:
+                    melodyPlayInterval = 5f; // Arpeggios
+                    break;
+                    
+                case FruitGrowthSystem.FruitStage.Resonant:
+                    melodyPlayInterval = 3f; // Chords and pads
+                    break;
+                    
+                case FruitGrowthSystem.FruitStage.Celestial:
+                    melodyPlayInterval = 2f; // Full-spectrum sequences
+                    playMelodyContinuously = true;
+                    break;
             }
         }
         
@@ -153,6 +294,12 @@ namespace ButterflyHouse.Plants
                 }
             }
             
+            // Notify fruit growth system of butterfly feed
+            if (fruitGrowthSystem != null)
+            {
+                fruitGrowthSystem.OnButterflyFeed();
+            }
+            
             // Notify ecosystem manager of butterfly-plant interaction
             if (Core.EcosystemStateController.Instance != null)
             {
@@ -164,6 +311,21 @@ namespace ButterflyHouse.Plants
             {
                 _isBeingConsumed = true;
                 _consumptionTimer = 0f;
+            }
+        }
+        
+        /// <summary>
+        /// Called when butterfly starts feeding from this fruit (continuous).
+        /// </summary>
+        public void OnButterflyFeeding(Butterflies.Butterfly butterfly)
+        {
+            if (butterfly == null) return;
+            
+            // Trigger visual feedback (subtle pulse)
+            FruitVisualController visualController = GetComponent<FruitVisualController>();
+            if (visualController != null)
+            {
+                visualController.Pulse(0.3f, 0.2f);
             }
         }
         
@@ -290,6 +452,17 @@ namespace ButterflyHouse.Plants
         
         public LandingTarget LandingTarget => landingTarget;
         public bool IsAvailable => landingTarget != null && landingTarget.IsAvailable;
+        public float EnergyOutput => energyOutput;
+        public float ResonanceFieldRadius => resonanceFieldRadius;
+        public FruitGrowthSystem.FruitStage CurrentStage => _currentStage;
+        
+        /// <summary>
+        /// Called when fruit stage changes externally.
+        /// </summary>
+        public void OnStageChanged(FruitGrowthSystem.FruitStage stage)
+        {
+            OnFruitStageChanged(stage);
+        }
     }
 }
 

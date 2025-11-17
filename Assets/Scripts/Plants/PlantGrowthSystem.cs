@@ -34,6 +34,12 @@ namespace ButterflyHouse.Plants
         [SerializeField] private Transform growthTarget; // Transform to scale/grow
         [SerializeField] private GameObject[] phaseVisuals; // Visual objects for each phase
         
+        [Header("Flower Spawning")]
+        [SerializeField] private Flowers.Flower flowerPrefab;
+        [SerializeField] private bool spawnFlowers = true;
+        [SerializeField] private GrowthPhase minPhaseForFlower = GrowthPhase.Bloom;
+        private Flowers.Flower _attachedFlower;
+        
         private GenerativePlant _generativePlant;
         private PlantVisualController _visualController;
         
@@ -182,6 +188,62 @@ namespace ButterflyHouse.Plants
                     EnableSentienceEffects();
                     break;
             }
+            
+            // Try to spawn flower when reaching minimum phase
+            if ((int)phase >= (int)minPhaseForFlower)
+            {
+                TrySpawnFlower();
+            }
+        }
+        
+        /// <summary>
+        /// Try to spawn a flower attached to this plant.
+        /// </summary>
+        private void TrySpawnFlower()
+        {
+            if (!spawnFlowers || _attachedFlower != null || flowerPrefab == null) return;
+            
+            if ((int)currentPhase < (int)minPhaseForFlower) return;
+            
+            // Spawn flower at top of plant or designated anchor point
+            Vector3 flowerPos = GetFlowerAnchorPoint();
+            GameObject flowerObj = Instantiate(flowerPrefab.gameObject, flowerPos, Quaternion.identity, transform);
+            _attachedFlower = flowerObj.GetComponent<Flowers.Flower>();
+            
+            if (_attachedFlower != null)
+            {
+                // Parent plant reference will be set by Flower's Start() method
+                // via GetComponentInParent<GenerativePlant>()
+                
+                Debug.Log($"Plant {gameObject.name} spawned flower at {flowerPos}");
+            }
+        }
+        
+        /// <summary>
+        /// Get the anchor point for spawning flowers (top of plant).
+        /// </summary>
+        private Vector3 GetFlowerAnchorPoint()
+        {
+            if (growthTarget != null)
+            {
+                // Place at top of growth target
+                Bounds bounds = growthTarget.GetComponent<Renderer>()?.bounds ?? new Bounds(transform.position, Vector3.one);
+                return bounds.center + Vector3.up * (bounds.size.y * 0.5f + 0.2f);
+            }
+            
+            // Default: above plant center
+            return transform.position + Vector3.up * 1f;
+        }
+        
+        /// <summary>
+        /// Get the attached flower.
+        /// </summary>
+        public Flowers.Flower GetAttachedFlower()
+        {
+            if (_attachedFlower == null)
+                _attachedFlower = GetComponentInChildren<Flowers.Flower>();
+            
+            return _attachedFlower;
         }
         
         private void EnableBloomEffects()

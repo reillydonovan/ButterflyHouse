@@ -126,21 +126,50 @@ The experience evolves through 5 stages:
 #### Lifecycle
 1. **Emerging** - Butterfly spawns from chrysalis at scale 0, grows to full size
 2. **Flying** - Procedural flight path using Perlin/curl noise
-3. **Landing** - Seeks nearby landing targets (hands, plants, fruits)
+3. **Landing** - Seeks nearby landing targets (hands, plants, flowers, fruits)
 4. **Dissipating** - After lifetime expires, fades out
+
+#### Lifetime System
+- **Random Lifespans**: Butterflies can live 0.8x to 3x their base lifetime
+- **Immortal Butterflies**: 10% chance to live forever (never die naturally)
+- **Lifetime Variety**: Ensures ecosystem diversity with butterflies of varying ages
 
 #### Flight Patterns
 - **Orbital Motion**: Butterflies orbit around central points with variable radii
 - **Perlin Noise**: Smooth, organic movement patterns
-- **Flocking** (Stage 3+): Butterflies synchronize movement in groups
+- **Flocking** (Stage 3+): Butterflies synchronize movement in groups using Boids algorithm:
+  - **Cohesion**: Move toward nearby butterflies
+  - **Alignment**: Align with nearby butterfly velocities
+  - **Separation**: Avoid crowding nearby butterflies
+  - Butterflies can break out of flocks randomly, after time, or when distance increases
 - **Waveform Transformation** (Stage 4+): Visual morphing into sine/saw/square/FM waveforms
 
 #### Landing Behavior
 - Butterflies randomly seek landing targets
-- Prioritize fruits, then plants, then hands
-- Remember last landing location (avoid immediate re-landing)
+- **Priority System**:
+  - **Fruits** (when energy is low): Butterflies feed from fruits to restore energy
+  - **Flowers** (when no pollen or low energy): Butterflies collect pollen and nectar from flowers
+  - **Plants**: Secondary landing targets for rest
+  - **Hands**: Landing on player hands increases harmony
+- Remember last landing location (avoid immediate re-landing on same spot)
 - Stay landed for random duration (2-8 seconds)
 - Cooldown period prevents constant re-landing (10-30 seconds)
+
+#### Energy System
+- Butterflies have **energy levels** that decay over time (after 10 seconds)
+- **Low Energy**: Butterflies actively seek fruits to feed and restore energy
+- **Feeding**: Butterflies gain energy while landing on fruits
+- **Energy-Based Behavior**: Flight speed and behavior affected by energy level
+
+#### Pollination System
+- Butterflies can **collect pollen** from flowers
+- **Pollen Carrying**: Butterflies track pollen charge (up to max 3 units)
+- **Pollen Deposition**: Butterflies deposit pollen on other flowers or fruits
+- **Pollination Effects**: 
+  - Increases **Harmony Level** when butterflies pollinate flowers
+  - Flowers evolve to higher stages when pollinated
+  - Meta-Flowers (stage 3) can spawn fruit seeds when fully pollinated
+- **Pollen Decay**: Pollen slowly decays if not deposited
 
 ### Plant Mechanics
 
@@ -154,11 +183,13 @@ The experience evolves through 5 stages:
 - New tendrils grow
 - Bioluminescent pulses
 - Multiple notes per touch (arpeggios)
+- Can spawn flowers
 
 **Level 2: Fractal Bloom** (5+ butterfly visits)
 - Branches subdivide procedurally
 - Responds visually to butterflies landing
 - More complex audio patterns
+- Spawns more flowers
 
 **Level 3: Psychedelic Sentience** (Harmony > 50 + 5 min in bloom)
 - Fully responsive to environment
@@ -166,6 +197,104 @@ The experience evolves through 5 stages:
 - Sways based on audio band energy
 - Touch releases spores/light particles
 - Responds to footsteps and hand proximity
+- Flowers on plant evolve faster
+
+### Flower Pollination System
+
+#### Flower Lifecycle
+
+Flowers grow from plants and serve as primary pollination targets for butterflies.
+
+**Stage FL0: Bud**
+- Small, closed flower
+- Low emission, minimal visual presence
+- Single pure tone when touched
+
+**Stage FL1: Bloom** (First pollination)
+- Petals open
+- Emits 2-note motifs
+- Attracts butterflies with nectar
+
+**Stage FL2: Radiant** (3+ pollinations)
+- Strong bioluminescence
+- Emits 3-5 note phrases
+- Higher nectar value and pollen yield
+
+**Stage FL3: Meta** (5+ pollinations + progression stage 3+)
+- Fractal visual patterns
+- Evolving melodies
+- Can spawn fruit seeds when fully pollinated
+- Influences nearby fruits and plants
+
+#### Pollination Loop
+
+1. **Butterfly Approaches Flower**: When butterfly has low energy or no pollen, it seeks flowers
+2. **Butterfly Lands on Flower**: 
+   - Collects pollen (if flower has pollen)
+   - Feeds on nectar (restores energy)
+   - Triggers visual/audio feedback
+3. **Butterfly Departs**: Carries pollen to next flower or fruit
+4. **Pollination Deposit**: 
+   - Increases flower's pollination count
+   - Advances flower stage
+   - Increases Harmony Level
+   - Meta-Flowers can spawn fruit seeds
+
+#### Flower Roles in Ecosystem
+
+- **Energy Source**: Flowers provide nectar for butterfly energy
+- **Pollen Collection**: Butterflies collect pollen from flowers
+- **Ecosystem Metrics**: Pollination events increase Harmony Level
+- **Fruit Spawning**: Meta-Flowers can spawn fruit seeds
+- **Plant Growth**: Pollinated flowers signal plant growth system
+
+### Fruit System
+
+#### Fruit Growth Stages
+
+Fruits are melodic energy orbs that butterflies feed from and evolve through stages.
+
+**Stage F0: Seed**
+- Small glowing orb
+- Single pure tone
+- Low energy output
+- Triggers when harmony level rises or first butterfly feed
+
+**Stage F1: Harmonic**
+- Grows petals/facets
+- Emits 2-3 note arpeggios
+- Higher energy output
+- Triggers when harmony > 20 or first butterfly feed
+
+**Stage F2: Resonant**
+- Complex geometry
+- Emits chords and harmonic pads
+- High energy output
+- Triggers when 5+ butterfly feeds OR curiosity > 30
+
+**Stage F3: Celestial**
+- Levitates above ground
+- Emits full-spectrum melodic sequences
+- Maximum energy output
+- Triggers when progression stage >= 4 (Synesthetic Overgrowth)
+
+#### Fruit-Butterfly Interaction
+
+- **Resonance Field**: Fruits emit energy field that butterflies detect
+- **Energy Transfer**: Butterflies gain energy while feeding from fruits
+- **Visual Feedback**: 
+  - Wings intensify color
+  - Sonification burst on landing
+  - Trail brightness increases
+  - Waveform tier can ascend after feeding
+- **Feeding Behavior**: Low-energy butterflies prioritize fruits over flowers
+
+#### Fruit Growth Triggers
+
+- **Butterfly Feeds**: Each feed increments feed count
+- **Pollen Deposition**: Pollen can accelerate fruit growth
+- **Ecosystem Metrics**: Harmony, curiosity, and progression stage influence growth
+- **Time-Based**: Fruits naturally evolve with ecosystem progression
 
 ### Rare Events
 
@@ -255,9 +384,13 @@ Your hands evolve through progression levels:
 - **Generative Butterflies** - Procedurally spawned butterflies with unique flight patterns using Perlin/curl noise
 - **Chrysalis System** - Pulsing spawn points that birth butterflies into the world
 - **Interactive Plants** - Touch-reactive flora that responds with sounds, visual effects, and vibrations
-- **Butterfly Landing** - Butterflies can land on hands, plants, or fruits, creating dynamic interactions
+- **Flower Pollination System** - Flowers that butterflies pollinate, creating a closed ecosystem loop
+- **Fruit System** - Melodic energy orbs that butterflies feed from, evolving through stages
+- **Butterfly Landing** - Butterflies can land on hands, plants, flowers, or fruits, creating dynamic interactions
 - **Trail System** - Beautiful particle trails that follow butterfly movements
 - **Audio-Visual Synthesis** - Butterfly motion maps to sound, creating an evolving soundscape
+- **Flocking Behavior** - Butterflies form flocks using Boids algorithm when near each other
+- **Energy & Pollination Systems** - Butterflies track energy and pollen, creating emergent behaviors
 
 ### Progression System
 - **5-Stage Ecosystem Evolution** - The sanctuary evolves through stages based on your interactions:
@@ -376,7 +509,35 @@ Assets/
 │   │   ├── GenerativePlant.cs        # Interactive plant
 │   │   ├── PlantVisualController.cs  # Visual effects
 │   │   ├── PlantGrowthSystem.cs      # Growth progression
-│   │   └── GenerativeFruit.cs        # Fruit objects
+│   │   ├── GenerativeFruit.cs        # Fruit objects
+│   │   ├── FruitGrowthSystem.cs      # Fruit growth stages
+│   │   ├── FruitVisualController.cs  # Fruit visual effects
+│   │   └── PlantManager.cs           # Plant management
+│   │
+│   ├── Flowers/                       # Flower systems
+│   │   ├── Flower.cs                 # Interactive flower
+│   │   └── FlowerVisualController.cs # Flower visual effects
+│   │
+│   ├── Butterflies/                   # Butterfly systems
+│   │   ├── Butterfly.cs              # Main behavior controller
+│   │   ├── ButterflyManager.cs       # Pooling and management
+│   │   ├── ButterflyArchetype.cs     # Butterfly type (SO)
+│   │   ├── ButterflyVisualController.cs
+│   │   ├── ButterflyAudio.cs         # Per-butterfly audio
+│   │   ├── ButterflyFormEvolution.cs # Waveform transformations
+│   │   ├── ButterflyEnergy.cs        # Energy tracking
+│   │   ├── ButterflyPollination.cs   # Pollen tracking
+│   │   └── Chrysalis.cs              # Spawn points
+│   │
+│   ├── Core/                          # Core systems
+│   │   ├── GameController.cs         # Main orchestrator
+│   │   ├── EcosystemStateController.cs # Progression tracking
+│   │   ├── EcosystemOrchestrator.cs  # Central ecosystem brain
+│   │   ├── ProgressionStageManager.cs # Stage transitions
+│   │   ├── EventOrchestrator.cs      # Rare events
+│   │   ├── HandAuraSystem.cs         # Hand aura evolution
+│   │   ├── Settings.cs               # Global settings (SO)
+│   │   └── LightCycle.cs             # Environmental phases
 │   │
 │   ├── Interaction/                   # Interaction systems
 │   │   ├── InteractionManager.cs     # XR interaction bridge
@@ -403,10 +564,13 @@ Assets/
 ## 🎨 Key Systems
 
 ### Progression System
-The `EcosystemStateController` tracks three main meters:
-- **Serenity**: Increases when player is still (measured via head/body movement)
-- **Curiosity**: Increases with exploration, plant touches, gestures
-- **Harmony**: Increases with butterfly landings and plant interactions
+The `EcosystemOrchestrator` is the central brain that coordinates all systems:
+- **EcosystemStateController**: Tracks three main meters:
+  - **Serenity**: Increases when player is still (measured via head/body movement)
+  - **Curiosity**: Increases with exploration, plant touches, gestures
+  - **Harmony**: Increases with butterfly landings, pollination events, and plant interactions
+- **ProgressionStageManager**: Evaluates current stage based on ecosystem metrics
+- **Subsystem Coordination**: Informs ButterflyManager, FruitManager, PlantManager, HandAuraSystem, and EventOrchestrator
 
 Stage progression is automatic based on meter thresholds and time spent in the experience.
 
@@ -414,14 +578,28 @@ Stage progression is automatic based on meter thresholds and time spent in the e
 Butterflies use procedural flight paths:
 - **Perlin/curl noise** for smooth, organic motion
 - **Orbit patterns** around central points
-- **Flocking behaviors** (in later stages)
-- **Target seeking** for landing zones
+- **Flocking behaviors** (Boids algorithm in Stage 3+):
+  - **Cohesion**: Move toward nearby butterflies
+  - **Alignment**: Align with nearby butterfly velocities
+  - **Separation**: Avoid crowding
+- **Target seeking** for landing zones (fruits, flowers, plants, hands)
+- **Energy-based behavior**: Low-energy butterflies prioritize fruits and flowers
+- **Random lifetimes**: Butterflies can live 0.8x-3x base lifetime, or be immortal (10% chance)
 
 ### Audio System
 - **Per-butterfly audio voices** that modulate based on movement
 - **Plant sound effects** triggered on touch
+- **Flower nectar melodies** played when butterflies land on flowers
+- **Fruit melodic sequences** that evolve with fruit growth stages
 - **Global audio density** adjusted by progression stage
 - **Spatial 3D audio** with proper falloff
+
+### Pollination & Energy Systems
+- **Butterfly Energy**: Tracks energy levels that decay over time (after 10 seconds)
+- **Energy Feeding**: Butterflies gain energy from fruits and flowers
+- **Pollen Collection**: Butterflies collect pollen from flowers
+- **Pollen Deposition**: Butterflies deposit pollen on other flowers or fruits
+- **Pollination Effects**: Increases Harmony Level, advances flower stages, spawns fruits
 
 ### Material System
 - **Shader Graph/HLSL shaders** for generative materials

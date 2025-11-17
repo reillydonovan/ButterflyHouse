@@ -268,6 +268,28 @@ namespace ButterflyHouse.Core
         }
         
         /// <summary>
+        /// Called when a flower is pollinated. Registers pollination and updates harmony.
+        /// </summary>
+        public void RegisterPollination(Flowers.Flower flower, float pollenAmount)
+        {
+            if (flower == null) return;
+            
+            // Increase harmony based on pollen amount
+            harmonyLevel = Mathf.Clamp(harmonyLevel + pollenAmount * 0.2f, 0f, 100f);
+            OnHarmonyChanged?.Invoke(harmonyLevel);
+            
+            // Meta-Flowers can spawn fruit seeds
+            if (flower.CurrentStage == Flowers.Flower.FlowerStage.Meta)
+            {
+                if (Plants.FruitManager.Instance != null)
+                {
+                    Vector3 spawnPos = flower.transform.position + Vector3.up * 0.15f;
+                    Plants.FruitManager.Instance.TrySpawnFruitAt(spawnPos);
+                }
+            }
+        }
+        
+        /// <summary>
         /// Called when player touches/interacts with a plant.
         /// </summary>
         public void OnPlayerPlantInteraction()
@@ -298,12 +320,52 @@ namespace ButterflyHouse.Core
             }
         }
         
-        // Public getters
-        public int ProgressionStage => progressionStage;
-        public float SerenityLevel => serenityLevel;
-        public float CuriosityLevel => curiosityLevel;
-        public float HarmonyLevel => harmonyLevel;
-        public float TimeAlive => timeAlive;
+        // Public getters and setters
+        public int ProgressionStage 
+        { 
+            get => progressionStage; 
+            set 
+            { 
+                progressionStage = value; 
+                OnStageChanged?.Invoke(progressionStage);
+            }
+        }
+        
+        public float SerenityLevel 
+        { 
+            get => serenityLevel; 
+            set 
+            { 
+                serenityLevel = Mathf.Clamp(value, 0f, 100f);
+                OnSerenityChanged?.Invoke(serenityLevel);
+            }
+        }
+        
+        public float CuriosityLevel 
+        { 
+            get => curiosityLevel; 
+            set 
+            { 
+                curiosityLevel = Mathf.Clamp(value, 0f, 100f);
+                OnCuriosityChanged?.Invoke(curiosityLevel);
+            }
+        }
+        
+        public float HarmonyLevel 
+        { 
+            get => harmonyLevel; 
+            set 
+            { 
+                harmonyLevel = Mathf.Clamp(value, 0f, 100f);
+                OnHarmonyChanged?.Invoke(harmonyLevel);
+            }
+        }
+        
+        public float TimeAlive 
+        { 
+            get => timeAlive; 
+            set => timeAlive = value;
+        }
         public int TotalPlantTouches => totalPlantTouches;
         public int ButterflyLandingsOnPlayer => butterflyLandingsOnPlayer;
         public bool FirstButterflyLanding => firstButterflyLanding;

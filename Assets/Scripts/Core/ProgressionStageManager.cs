@@ -114,6 +114,12 @@ namespace ButterflyHouse.Core
             // Plants begin responding to footsteps/head movement
             UpdateTrailSettings(2f, 0.1f); // Longer, slightly thicker trails
             UpdateAudioDensity(0.5f); // Medium audio density
+            
+            // Upgrade fruits to Harmonic stage
+            if (Plants.FruitManager.Instance != null)
+            {
+                Plants.FruitManager.Instance.UpgradeAllFruit(Plants.FruitGrowthSystem.FruitStage.Harmonic);
+            }
         }
         
         private void ApplyStage2Effects()
@@ -126,6 +132,12 @@ namespace ButterflyHouse.Core
             // Audio gains subtle harmonics
             UpdateTrailSettings(2.5f, 0.15f); // Longer, thicker trails
             UpdateAudioDensity(0.7f); // Higher audio density with harmonics
+            
+            // Upgrade some fruits to Resonant stage
+            if (Plants.FruitManager.Instance != null)
+            {
+                Plants.FruitManager.Instance.UpgradeSomeFruit(Plants.FruitGrowthSystem.FruitStage.Resonant, 0.3f);
+            }
         }
         
         private void ApplyStage3Effects()
@@ -150,6 +162,12 @@ namespace ButterflyHouse.Core
             // Space feels alive and self-transforming
             UpdateTrailSettings(4f, 0.3f); // Very long, very thick trails
             UpdateAudioDensity(1f); // Maximum audio density with chords
+            
+            // Spawn celestial fruits
+            if (Plants.FruitManager.Instance != null)
+            {
+                Plants.FruitManager.Instance.SpawnCelestialFruit();
+            }
         }
         
         private void ApplyStage5Effects()
@@ -213,6 +231,48 @@ namespace ButterflyHouse.Core
         }
         
         public int CurrentStage => currentStage;
+        
+        /// <summary>
+        /// Evaluate the current progression stage based on ecosystem state.
+        /// This is used by EcosystemOrchestrator to determine stage progression.
+        /// </summary>
+        public int EvaluateStage(EcosystemStateController eco)
+        {
+            if (eco == null) return 0;
+            
+            float t = eco.TimeAlive;
+            float serenity = eco.SerenityLevel;
+            float curiosity = eco.CuriosityLevel;
+            float harmony = eco.HarmonyLevel;
+            int totalTouches = eco.TotalPlantTouches;
+            bool firstLanding = eco.FirstButterflyLanding;
+            
+            // Stage 0: Emergence
+            if (t < 45f && !firstLanding)
+                return 0;
+            
+            // Stage 1: Expansion
+            if (harmony < 20f || serenity < 15f)
+                return 1;
+            
+            // Stage 2: Symbiosis
+            if (curiosity < 30f || totalTouches < 5)
+                return 2;
+            
+            // Stage 3: Emergent Ecology
+            float serenitySustained = eco.SerenitySustainedTime;
+            if (serenitySustained < 60f)
+                return 3;
+            
+            // Stage 4: Synesthetic Overgrowth
+            bool allHigh = harmony >= 50f && curiosity >= 50f && serenity >= 50f;
+            float minTimeForStage5 = 12f * 60f; // 12 minutes
+            if (!allHigh || t < minTimeForStage5)
+                return 4;
+            
+            // Stage 5: Ascension
+            return 5;
+        }
     }
 }
 

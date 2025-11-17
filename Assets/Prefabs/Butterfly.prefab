@@ -162,6 +162,8 @@ MonoBehaviour:
   visualController: {fileID: 0}
   audioController: {fileID: 0}
   formEvolution: {fileID: 0}
+  energySystem: {fileID: 0}
+  pollinationSystem: {fileID: 0}
   trailRenderer: {fileID: 0}
   butterflyCollider: {fileID: 0}
   emergingDuration: 2
@@ -198,6 +200,21 @@ MonoBehaviour:
   maxLandingDuration: 8
   minLandingCooldown: 10
   maxLandingCooldown: 30
+  enableFlocking: 1
+  flockDetectionRadius: 5
+  flockCohesionWeight: 1
+  flockAlignmentWeight: 1
+  flockSeparationWeight: 1.5
+  flockSeparationDistance: 2
+  flockBlendSpeed: 2
+  breakOutChance: 0.1
+  breakOutCheckInterval: 3
+  maxFlockTime: 30
+  enableDebugLogs: 1
+  debugLogInterval: 2
+  lifetimeMultiplierMin: 0.8
+  lifetimeMultiplierMax: 3
+  immortalChance: 0.1
 --- !u!82 &1962336036909699428
 AudioSource:
   m_ObjectHideFlags: 0

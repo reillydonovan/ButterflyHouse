@@ -56,10 +56,25 @@ namespace ButterflyHouse.Plants
         
         private void Start()
         {
+            // Register with PlantManager
+            if (PlantManager.Instance != null)
+            {
+                PlantManager.Instance.RegisterPlant(this);
+            }
+            
             // Apply settings
             if (Settings.Instance != null && audioSource != null)
             {
                 audioSource.volume = audioVolume * Settings.Instance.plantVolume;
+            }
+        }
+        
+        private void OnDestroy()
+        {
+            // Unregister from PlantManager
+            if (PlantManager.Instance != null)
+            {
+                PlantManager.Instance.UnregisterPlant(this);
             }
         }
         
@@ -94,7 +109,13 @@ namespace ButterflyHouse.Plants
             // Audio feedback
             PlayRandomSound();
             
-            // Notify ecosystem manager of player interaction
+            // Notify ecosystem orchestrator
+            if (Core.EcosystemOrchestrator.Instance != null)
+            {
+                Core.EcosystemOrchestrator.Instance.RegisterPlantTouch(this);
+            }
+            
+            // Also notify ecosystem state controller for compatibility
             if (Core.EcosystemStateController.Instance != null)
             {
                 Core.EcosystemStateController.Instance.OnPlayerPlantInteraction();
