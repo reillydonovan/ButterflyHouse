@@ -156,12 +156,22 @@ The experience evolves through 5 stages:
 1. **Emerging** - Butterfly spawns from chrysalis at scale 0, grows to full size
 2. **Flying** - Procedural flight path using Perlin/curl noise
 3. **Landing** - Seeks nearby landing targets (hands, plants, flowers, fruits)
-4. **Dissipating** - After lifetime expires, fades out
+4. **Dissipating** - After lifetime expires, butterfly must land before dying, then fades out peacefully
 
 #### Lifetime System
-- **Random Lifespans**: Butterflies can live 0.8x to 3x their base lifetime
-- **Immortal Butterflies**: 10% chance to live forever (never die naturally)
-- **Lifetime Variety**: Ensures ecosystem diversity with butterflies of varying ages
+- **Lifespan Range**: Butterflies live between **5 minutes** (300 seconds) and **30 minutes** (1800 seconds), assigned randomly at spawn
+- **Lifetime Extensions**: 
+  - **Feeding on Fruits**: Extends lifetime by **60 seconds** (+1 minute) per feeding
+  - **Pollinating Flowers**: Extends lifetime by **45 seconds** per pollination
+  - Extensions happen once per landing (cannot stack multiple extensions from the same landing)
+- **Final Landing**: 
+  - Butterflies **cannot die mid-flight** - they must land before passing away
+  - When lifetime expires during flight, butterfly enters "seeking final landing" mode
+  - Butterflies start actively seeking landing 30 seconds before death
+  - Priority shifts to flowers (if carrying pollen for life extension) or fruits (to extend life)
+  - Falls back to any plant/flower/fruit if life-extending targets aren't available
+- **Death Process**: After landing, butterfly completes its landing duration, then peacefully dissipates
+- **Lifetime Tracking**: System tracks fruit feeding count and pollination count for each butterfly
 
 #### Flight Patterns
 - **Orbital Motion**: Butterflies orbit around central points with variable radii
@@ -180,14 +190,21 @@ The experience evolves through 5 stages:
   - **Flowers** (when no pollen or low energy): Butterflies collect pollen and nectar from flowers
   - **Plants**: Secondary landing targets for rest
   - **Hands**: Landing on player hands increases harmony
+- **Final Landing Mode** (when near death):
+  - Activated when lifetime expires or within 30 seconds of death
+  - Ignores landing cooldown to find a landing spot
+  - 100% chance to seek landing (no random check)
+  - Prioritizes life-extending targets: flowers (if carrying pollen) or fruits
+  - Falls back to any plant/flower/fruit if life extension isn't possible
 - Remember last landing location (avoid immediate re-landing on same spot)
 - Stay landed for random duration (2-8 seconds)
-- Cooldown period prevents constant re-landing (10-30 seconds)
+- Cooldown period prevents constant re-landing (10-30 seconds) - *disabled when seeking final landing*
 
 #### Energy System
 - Butterflies have **energy levels** that decay over time (after 10 seconds)
 - **Low Energy**: Butterflies actively seek fruits to feed and restore energy
 - **Feeding**: Butterflies gain energy while landing on fruits
+- **Lifetime Extension**: Feeding on fruits extends butterfly lifetime by **60 seconds** per feeding
 - **Energy-Based Behavior**: Flight speed and behavior affected by energy level
 
 #### Pollination System
@@ -198,6 +215,7 @@ The experience evolves through 5 stages:
   - Increases **Harmony Level** when butterflies pollinate flowers
   - Flowers evolve to higher stages when pollinated
   - Meta-Flowers (stage 3) can spawn fruit seeds when fully pollinated
+  - **Lifetime Extension**: Pollinating flowers extends butterfly lifetime by **45 seconds** per pollination
 - **Pollen Decay**: Pollen slowly decays if not deposited
 
 ### Plant Mechanics
@@ -277,6 +295,9 @@ Flowers grow from plants and serve as primary pollination targets for butterflie
 **When Butterfly Lands on Flower**:
 - **Energy Restoration**: Butterfly gains energy equal to flower's `nectarValue` (0.5-2.0 based on stage)
 - **Pollen Collection**: Butterfly collects `pollenYield` amount (0.5-2.0 based on stage)
+- **Lifetime Extension**: When butterfly deposits pollen (pollinates), lifetime extends by **45 seconds** per pollination
+  - Extension happens once per landing (cannot stack multiple extensions from same landing)
+  - Pollinating flowers is a key survival strategy for butterflies
 - **Stage Benefits**: 
   - Higher stage flowers (Radiant/Meta) provide more energy and pollen
   - Meta-Flowers may trigger special visual/audio effects
@@ -284,7 +305,7 @@ Flowers grow from plants and serve as primary pollination targets for butterflie
 - **Priority Selection**: 
   - Low-energy butterflies prefer flowers with high nectar value
   - Butterflies without pollen seek flowers to collect from
-  - Butterflies with pollen seek other flowers to deposit on
+  - Butterflies with pollen seek other flowers to deposit on (especially when near death for life extension)
 
 **Visual Effects During Flower Landing**:
 - Flower petals open/close animation
@@ -343,6 +364,10 @@ Fruits are melodic energy orbs that butterflies feed from and evolve through sta
 
 **Feeding Mechanics**:
 - **Energy Transfer**: Butterflies gain energy while landing on fruits (rate based on fruit's `energyOutput`)
+- **Lifetime Extension**: Feeding on fruits extends butterfly lifetime by **60 seconds** (+1 minute) per feeding
+  - Extension happens once per landing (cannot stack multiple extensions from same landing)
+  - Extensions can push butterflies well beyond their initial 30-minute maximum
+  - Butterflies that actively feed can live significantly longer
 - **Stage-Based Energy**: 
   - Seed Stage: Low energy output (0.3 units/sec)
   - Harmonic Stage: Moderate energy (0.5 units/sec)
@@ -678,7 +703,8 @@ Butterflies use procedural flight paths:
   - **Separation**: Avoid crowding
 - **Target seeking** for landing zones (fruits, flowers, plants, hands)
 - **Energy-based behavior**: Low-energy butterflies prioritize fruits and flowers
-- **Random lifetimes**: Butterflies can live 0.8x-3x base lifetime, or be immortal (10% chance)
+- **Lifetime system**: Butterflies live 5-30 minutes (random), extended by feeding on fruits (+60s) and pollinating flowers (+45s)
+- **Final landing behavior**: Butterflies must land before dying (cannot die mid-flight), actively seek landing 30 seconds before death
 
 ### Audio System
 - **Per-butterfly audio voices** that modulate based on movement
@@ -691,9 +717,13 @@ Butterflies use procedural flight paths:
 ### Pollination & Energy Systems
 - **Butterfly Energy**: Tracks energy levels that decay over time (after 10 seconds)
 - **Energy Feeding**: Butterflies gain energy from fruits and flowers
+- **Lifetime Extensions**: 
+  - **Fruit Feeding**: Extends lifetime by 60 seconds per feeding
+  - **Flower Pollination**: Extends lifetime by 45 seconds per pollination
+  - Butterflies that actively interact with ecosystem can live well beyond 30 minutes
 - **Pollen Collection**: Butterflies collect pollen from flowers
 - **Pollen Deposition**: Butterflies deposit pollen on other flowers or fruits
-- **Pollination Effects**: Increases Harmony Level, advances flower stages, spawns fruits
+- **Pollination Effects**: Increases Harmony Level, advances flower stages, spawns fruits, extends butterfly lifetime
 
 ### Material System
 - **Shader Graph/HLSL shaders** for generative materials

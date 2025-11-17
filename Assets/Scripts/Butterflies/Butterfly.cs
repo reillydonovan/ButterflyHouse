@@ -66,10 +66,11 @@ namespace ButterflyHouse.Butterflies
         [SerializeField] private float debugLogInterval = 2f;
         
         [Header("Lifetime")]
-        [SerializeField] private float lifetimeMultiplierMin = 0.8f;
-        [SerializeField] private float lifetimeMultiplierMax = 3f;
-        [Range(0f, 1f)]
-        [SerializeField] private float immortalChance = 0.1f; // 10% chance to live forever
+        [SerializeField] private float minLifetime = 300f; // 5 minutes (300 seconds)
+        [SerializeField] private float maxLifetime = 1800f; // 30 minutes (1800 seconds)
+        [SerializeField] private float fruitFeedingLifetimeBonus = 60f; // 1 minute per fruit feeding
+        [SerializeField] private float flowerPollinationLifetimeBonus = 45f; // 45 seconds per pollination
+        [SerializeField] private float landingSeekTimeThreshold = 30f; // Start seeking landing 30 seconds before death
         
         private ButterflyArchetype _archetype;
         private State _currentState = State.Emerging;
@@ -84,6 +85,10 @@ namespace ButterflyHouse.Butterflies
         private Vector3 _landingOffset;
         private float _actualLifetime = -1f; // -1 means immortal
         private float _normalizedAge => _actualLifetime > 0 ? (_age / _actualLifetime) : 0f;
+        private bool _seekingFinalLanding = false; // True when butterfly needs to land before dying
+        private int _fruitFeedingCount = 0; // Track fruit feedings for lifetime extension
+        private int _pollinationCount = 0; // Track pollinations for lifetime extension
+        private bool _hasExtendedLifetimeThisLanding = false; // Prevent multiple extensions per landing
         
         // Flight parameters
         private Vector3 _noiseOffset;
@@ -207,20 +212,14 @@ namespace ButterflyHouse.Butterflies
             _age = 0f;
             _landingTimer = 0f;
             
-            // Calculate random lifetime (some may be immortal)
-            if (Random.value < immortalChance)
-            {
-                _actualLifetime = -1f; // -1 means immortal (never dies)
-                if (enableDebugLogs)
-                    Debug.Log($"[Butterfly] {gameObject.name}: IMMORTAL butterfly spawned!");
-            }
-            else
-            {
-                float lifetimeMultiplier = Random.Range(lifetimeMultiplierMin, lifetimeMultiplierMax);
-                _actualLifetime = archetype.lifetime * lifetimeMultiplier;
-                if (enableDebugLogs)
-                    Debug.Log($"[Butterfly] {gameObject.name}: Spawned with lifetime {_actualLifetime:F1}s (base={archetype.lifetime:F1}s, multiplier={lifetimeMultiplier:F2}x)");
-            }
+            // Calculate random lifetime between 5 and 30 minutes
+            _actualLifetime = Random.Range(minLifetime, maxLifetime);
+            _seekingFinalLanding = false;
+            _fruitFeedingCount = 0;
+            _pollinationCount = 0;
+            
+            if (enableDebugLogs)
+                Debug.Log($"[Butterfly] {gameObject.name}: Spawned with lifetime {_actualLifetime:F1}s ({_actualLifetime / 60f:F1} minutes)");
             
             // Initialize scale to 0 for emerging
             transform.localScale = Vector3.zero;
@@ -288,15 +287,40 @@ namespace ButterflyHouse.Butterflies
             // Main flying loop
             _currentState = State.Flying;
             
-            // Loop while flying and not expired (immortal butterflies never expire)
-            while (_currentState == State.Flying && (_actualLifetime < 0 || _age < _actualLifetime))
+            // Loop while flying and not expired
+            while (_currentState == State.Flying && _age < _actualLifetime)
             {
                 yield return null;
             }
             
-            // Check if we should dissipate or land
-            if (_currentState == State.Flying)
+            // When lifetime expires, butterfly must land before dying
+            if (_actualLifetime > 0 && _age >= _actualLifetime && _currentState == State.Flying)
             {
+                // Butterfly cannot die mid-flight - must seek landing
+                if (enableDebugLogs)
+                    Debug.Log($"[Butterfly] {gameObject.name}: Lifetime expired but in flight - seeking final landing (age={_age:F1}s, lifetime={_actualLifetime:F1}s)");
+                _seekingFinalLanding = true;
+                
+                // Continue flying and seeking landing until landed
+                while (_currentState == State.Flying && _seekingFinalLanding)
+                {
+                    yield return null;
+                }
+                
+                // Now check if we landed - if so, we can die
+                if (_currentState == State.Landing || _currentLandingTarget != null)
+                {
+                    // Wait for landing to complete, then dissipate
+                    yield return new WaitForSeconds(1f); // Brief pause after landing
+                    if (enableDebugLogs)
+                        Debug.Log($"[Butterfly] {gameObject.name}: Lifetime expired after landing - beginning dissipation (age={_age:F1}s, lifetime={_actualLifetime:F1}s)");
+                    _currentState = State.Dissipating;
+                    yield return StartCoroutine(DissipatingCoroutine());
+                }
+            }
+            else if (_currentState == State.Flying && _actualLifetime > 0 && _age >= _actualLifetime)
+            {
+                // Fallback - if still flying somehow, start dissipating
                 if (enableDebugLogs)
                     Debug.Log($"[Butterfly] {gameObject.name}: Lifetime expired in coroutine (age={_age:F1}s, lifetime={_actualLifetime:F1}s)");
                 _currentState = State.Dissipating;
@@ -382,13 +406,18 @@ namespace ButterflyHouse.Butterflies
         
         private void UpdateState()
         {
-            // Check if lifetime expired (immortal butterflies have _actualLifetime = -1)
-            if (_actualLifetime > 0 && _age >= _actualLifetime && _currentState == State.Flying)
+            // Check if lifetime expired - if in flight, start seeking final landing
+            if (_actualLifetime > 0 && _age >= _actualLifetime && _currentState == State.Flying && !_seekingFinalLanding)
             {
                 if (enableDebugLogs)
-                    Debug.Log($"[Butterfly] {gameObject.name}: Lifetime expired in UpdateState (age={_age:F1}s, lifetime={_actualLifetime:F1}s)");
-                _currentState = State.Dissipating;
-                StartCoroutine(DissipatingCoroutine());
+                    Debug.Log($"[Butterfly] {gameObject.name}: Lifetime expired in UpdateState - must land before dying (age={_age:F1}s, lifetime={_actualLifetime:F1}s)");
+                _seekingFinalLanding = true;
+            }
+            
+            // If near death (within landing seek threshold), prioritize landing
+            if (_actualLifetime > 0 && _age >= (_actualLifetime - landingSeekTimeThreshold) && _currentState == State.Flying)
+            {
+                _seekingFinalLanding = true;
             }
         }
         
@@ -817,8 +846,8 @@ namespace ButterflyHouse.Butterflies
             // Only check if we're not already landing and it's time to land
             if (_currentLandingTarget != null) return;
             
-            // Check if we're in landing cooldown period
-            if (Time.time < _landingCooldownEndTime) return;
+            // Check if we're in landing cooldown period (ignore if seeking final landing)
+            if (!_seekingFinalLanding && Time.time < _landingCooldownEndTime) return;
             
             // Check if butterfly needs energy (prioritize fruits when low energy)
             bool needsEnergy = energySystem != null && energySystem.NeedsEnergy;
@@ -828,18 +857,21 @@ namespace ButterflyHouse.Butterflies
             float seekChance = 0.3f;
             if (needsEnergy) seekChance = 0.7f; // Higher chance if low energy
             if (isCarryingPollen) seekChance = 0.6f; // Higher chance if carrying pollen
+            if (_seekingFinalLanding) seekChance = 1.0f; // Always seek if must land before dying
             
-            // Random chance to seek landing target
-            if (Random.value > seekChance) return;
+            // Random chance to seek landing target (unless seeking final landing)
+            if (!_seekingFinalLanding && Random.value > seekChance) return;
             
             Collider[] nearbyTargets = Physics.OverlapSphere(transform.position, landingRadius, landingTargetLayer);
             
             // Prioritize targets based on state
+            // - Seeking final landing: prefer flowers, fruits, or plants (must land before dying)
             // - Low energy: prefer flowers or fruits
             // - Carrying pollen: prefer fruit (to deposit) or flowers (to pollinate)
             // - Otherwise: prefer fruits, then flowers, then other targets
             Interaction.LandingTarget fruitTarget = null;
             Interaction.LandingTarget flowerTarget = null;
+            Interaction.LandingTarget plantTarget = null;
             Interaction.LandingTarget otherTarget = null;
             
             foreach (var target in nearbyTargets)
@@ -854,6 +886,8 @@ namespace ButterflyHouse.Butterflies
                 if (landingTarget.Type == Interaction.LandingTarget.TargetType.Fruit)
                 {
                     fruitTarget = landingTarget;
+                    // If seeking final landing, prioritize fruits (can extend life by feeding)
+                    if (_seekingFinalLanding) break;
                     // Don't break - continue to check for flowers if we're carrying pollen
                     if (!isCarryingPollen) break; // Otherwise prioritize fruits
                 }
@@ -867,12 +901,22 @@ namespace ButterflyHouse.Butterflies
                     if (flower != null)
                     {
                         flowerTarget = landingTarget;
+                        // If seeking final landing and carrying pollen, prioritize flowers (can extend life by pollinating)
+                        if (_seekingFinalLanding && isCarryingPollen) break;
                         // Prefer flowers when low energy or not carrying pollen
                         if (needsEnergy || !isCarryingPollen) break;
                     }
-                    else if (otherTarget == null)
+                    else
                     {
-                        otherTarget = landingTarget;
+                        // Regular plant (not a flower) - acceptable for final landing
+                        if (_seekingFinalLanding)
+                        {
+                            plantTarget = landingTarget;
+                        }
+                        else if (otherTarget == null)
+                        {
+                            otherTarget = landingTarget;
+                        }
                     }
                 }
                 else if (otherTarget == null)
@@ -884,7 +928,27 @@ namespace ButterflyHouse.Butterflies
             // Choose target based on state
             Interaction.LandingTarget chosenTarget = null;
             
-            if (needsEnergy)
+            if (_seekingFinalLanding)
+            {
+                // When seeking final landing, prioritize targets that can extend life or at least allow death
+                if (isCarryingPollen && flowerTarget != null)
+                {
+                    chosenTarget = flowerTarget; // Pollinate to extend life
+                }
+                else if (fruitTarget != null)
+                {
+                    chosenTarget = fruitTarget; // Feed to extend life
+                }
+                else if (flowerTarget != null)
+                {
+                    chosenTarget = flowerTarget; // Acceptable landing spot
+                }
+                else if (plantTarget != null)
+                {
+                    chosenTarget = plantTarget; // Acceptable landing spot (not ideal, but allows death)
+                }
+            }
+            else if (needsEnergy)
             {
                 // Low energy: prefer flowers (collect pollen + energy) or fruits
                 chosenTarget = flowerTarget ?? fruitTarget;
@@ -915,6 +979,7 @@ namespace ButterflyHouse.Butterflies
             // Set random landing duration
             _landingDuration = Random.Range(minLandingDuration, maxLandingDuration);
             _landingStartTime = Time.time;
+            _hasExtendedLifetimeThisLanding = false; // Reset extension tracking for new landing
             
             // Calculate landing offset
             Vector3 toButterfly = transform.position - target.transform.position;
@@ -972,6 +1037,17 @@ namespace ButterflyHouse.Butterflies
                         {
                             energySystem.FeedFromFruit(fruit);
                             fruit.OnButterflyFeeding(this);
+                            
+                            // Extend lifetime when feeding from fruit (once per landing)
+                            if (_actualLifetime > 0 && !_hasExtendedLifetimeThisLanding)
+                            {
+                                _fruitFeedingCount++;
+                                _actualLifetime += fruitFeedingLifetimeBonus;
+                                _seekingFinalLanding = false; // Reset seeking flag since we're extending life
+                                _hasExtendedLifetimeThisLanding = true; // Mark that we've extended this landing
+                                if (enableDebugLogs)
+                                    Debug.Log($"[Butterfly] {gameObject.name}: Fed from fruit - extended lifetime by {fruitFeedingLifetimeBonus:F1}s (new lifetime: {_actualLifetime:F1}s, feed count: {_fruitFeedingCount})");
+                            }
                         }
                         
                         // Deposit pollen to fruit (accelerates fruit evolution)
@@ -999,6 +1075,17 @@ namespace ButterflyHouse.Butterflies
                         {
                             // Deposit pollen (cross-pollination)
                             pollinationSystem.DepositPollen(flower);
+                            
+                            // Extend lifetime when pollinating flowers (once per landing)
+                            if (_actualLifetime > 0 && !_hasExtendedLifetimeThisLanding)
+                            {
+                                _pollinationCount++;
+                                _actualLifetime += flowerPollinationLifetimeBonus;
+                                _seekingFinalLanding = false; // Reset seeking flag since we're extending life
+                                _hasExtendedLifetimeThisLanding = true; // Mark that we've extended this landing
+                                if (enableDebugLogs)
+                                    Debug.Log($"[Butterfly] {gameObject.name}: Pollinated flower - extended lifetime by {flowerPollinationLifetimeBonus:F1}s (new lifetime: {_actualLifetime:F1}s, pollination count: {_pollinationCount})");
+                            }
                         }
                         else
                         {
@@ -1012,6 +1099,16 @@ namespace ButterflyHouse.Butterflies
                 float landingTimeElapsed = Time.time - _landingStartTime;
                 if (landingTimeElapsed >= _landingDuration)
                 {
+                    // If we were seeking final landing and lifetime has expired, start dissipation
+                    if (_seekingFinalLanding && _actualLifetime > 0 && _age >= _actualLifetime)
+                    {
+                        if (enableDebugLogs)
+                            Debug.Log($"[Butterfly] {gameObject.name}: Final landing complete - beginning dissipation (age={_age:F1}s, lifetime={_actualLifetime:F1}s)");
+                        _currentState = State.Dissipating;
+                        StartCoroutine(DissipatingCoroutine());
+                        return;
+                    }
+                    
                     // Landing duration complete, take off
                     TakeOff();
                 }
