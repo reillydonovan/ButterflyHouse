@@ -15,9 +15,29 @@ namespace ButterflyHouse.Butterflies
         [SerializeField] private Butterfly butterflyPrefab;
         
         [Header("Spawn Settings")]
-        [SerializeField] private int maxButterflies = 20;
+        [SerializeField] private int baseMaxButterflies = 20;
+        [SerializeField] private int currentMaxButterflies = 20;
         [SerializeField] private bool enableAutoCleanup = true;
         [SerializeField] private float cleanupInterval = 5f;
+        
+        [Header("Stage-Based Population")]
+        [SerializeField] private bool scalePopulationWithStage = true;
+        [SerializeField] private int maxButterfliesStage0 = 20;
+        [SerializeField] private int maxButterfliesStage1 = 30;
+        [SerializeField] private int maxButterfliesStage2 = 50;
+        [SerializeField] private int maxButterfliesStage3 = 75;
+        [SerializeField] private int maxButterfliesStage4 = 150;
+        [SerializeField] private int maxButterfliesStage5 = 250;
+        
+        [Header("Population Maintenance")]
+        [SerializeField] private bool maintainPopulation = true;
+        [SerializeField] private float minPopulationPercent = 0.7f; // Spawn when below 70% of max
+        [SerializeField] private float populationCheckInterval = 5f; // Check every 5 seconds
+        
+        [Header("Debug")]
+        [SerializeField] private bool enableDebugLogs = false;
+        
+        private float _populationCheckTimer = 0f;
         
         [Header("Bounding Box")]
         [SerializeField] private bool useBoundingBox = true;
@@ -41,6 +61,7 @@ namespace ButterflyHouse.Butterflies
             }
             
             Instance = this;
+            currentMaxButterflies = baseMaxButterflies;
         }
         
         private void Update()
@@ -52,6 +73,17 @@ namespace ButterflyHouse.Butterflies
                 {
                     CleanupDissipatedButterflies();
                     _cleanupTimer = 0f;
+                }
+            }
+            
+            // Population maintenance check
+            if (maintainPopulation)
+            {
+                _populationCheckTimer += Time.deltaTime;
+                if (_populationCheckTimer >= populationCheckInterval)
+                {
+                    CheckPopulationMaintenance();
+                    _populationCheckTimer = 0f;
                 }
             }
         }
@@ -67,9 +99,10 @@ namespace ButterflyHouse.Butterflies
                 return null;
             }
             
-            if (_activeButterflies.Count >= maxButterflies)
+            if (_activeButterflies.Count >= currentMaxButterflies)
             {
-                Debug.Log($"Max butterflies ({maxButterflies}) reached. Cannot spawn new butterfly.");
+                if (enableDebugLogs)
+                    Debug.Log($"Max butterflies ({currentMaxButterflies}) reached. Current: {_activeButterflies.Count}. Cannot spawn new butterfly.");
                 return null;
             }
             
@@ -282,9 +315,27 @@ namespace ButterflyHouse.Butterflies
         public int ActiveButterflyCount => _activeButterflies.Count;
         
         /// <summary>
+        /// Get the current maximum butterfly population (scales with progression stage).
+        /// </summary>
+        public int CurrentMaxButterflies => currentMaxButterflies;
+        
+        /// <summary>
         /// Check if we can spawn more butterflies.
         /// </summary>
-        public bool CanSpawn => _activeButterflies.Count < maxButterflies;
+        public bool CanSpawn => _activeButterflies.Count < currentMaxButterflies;
+        
+        /// <summary>
+        /// Check if we should spawn more butterflies to maintain population.
+        /// </summary>
+        public bool ShouldSpawnForMaintenance
+        {
+            get
+            {
+                if (!maintainPopulation) return false;
+                float targetMin = currentMaxButterflies * minPopulationPercent;
+                return _activeButterflies.Count < targetMin;
+            }
+        }
         
         /// <summary>
         /// Remove all butterflies from the scene.
@@ -316,13 +367,62 @@ namespace ButterflyHouse.Butterflies
         
         /// <summary>
         /// Called when progression stage changes.
+        /// Updates max butterfly population based on stage.
         /// </summary>
         public void OnProgressionStageChanged(int newStage)
         {
             Debug.Log($"ButterflyManager: Progression stage changed to {newStage}");
             
+            if (scalePopulationWithStage)
+            {
+                int previousMax = currentMaxButterflies;
+                
+                // Update max butterflies based on stage
+                switch (newStage)
+                {
+                    case 0:
+                        currentMaxButterflies = maxButterfliesStage0;
+                        break;
+                    case 1:
+                        currentMaxButterflies = maxButterfliesStage1;
+                        break;
+                    case 2:
+                        currentMaxButterflies = maxButterfliesStage2;
+                        break;
+                    case 3:
+                        currentMaxButterflies = maxButterfliesStage3;
+                        break;
+                    case 4:
+                        currentMaxButterflies = maxButterfliesStage4;
+                        break;
+                    case 5:
+                        currentMaxButterflies = maxButterfliesStage5;
+                        break;
+                    default:
+                        // Default to stage 0 if stage is out of range
+                        currentMaxButterflies = maxButterfliesStage0;
+                        break;
+                }
+                
+                Debug.Log($"ButterflyManager: Max population updated from {previousMax} to {currentMaxButterflies} (Stage {newStage}). Current population: {_activeButterflies.Count}");
+            }
+            
             // Stage-specific butterfly behaviors can be added here
-            // For example: spawn more butterflies, change flight patterns, etc.
+            // For example: change flight patterns, spawn bonus butterflies, etc.
+        }
+        
+        /// <summary>
+        /// Check if population needs maintenance and log status.
+        /// </summary>
+        private void CheckPopulationMaintenance()
+        {
+            int currentCount = _activeButterflies.Count;
+            float targetMin = currentMaxButterflies * minPopulationPercent;
+            
+            if (currentCount < targetMin)
+            {
+                Debug.Log($"ButterflyManager: Population below target ({currentCount}/{currentMaxButterflies}, target min: {targetMin:F0}). Chrysalises should spawn more frequently.");
+            }
         }
         
         private void OnDrawGizmos()
