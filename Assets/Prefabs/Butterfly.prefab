@@ -201,7 +201,8 @@ MonoBehaviour:
   minLandingCooldown: 10
   maxLandingCooldown: 30
   enableFlocking: 1
-  flockDetectionRadius: 5
+  flockDetectionRadius: 1
+  minButterfliesForFlock: 2
   flockCohesionWeight: 1
   flockAlignmentWeight: 1
   flockSeparationWeight: 1.5
@@ -210,11 +211,22 @@ MonoBehaviour:
   breakOutChance: 0.1
   breakOutCheckInterval: 3
   maxFlockTime: 30
+  enableFlockingCooldown: 1
+  minFlockingCooldown: 10
+  maxFlockingCooldown: 30
+  enableTerritoryExploration: 1
+  territoryCheckRadius: 5
+  maxTimeInTerritory: 60
+  territoryReachedDistance: 10
+  newTerritoryMinDistance: 15
+  territorySeekSpeed: 1.5
   enableDebugLogs: 1
   debugLogInterval: 2
-  lifetimeMultiplierMin: 0.8
-  lifetimeMultiplierMax: 3
-  immortalChance: 0.1
+  minLifetime: 300
+  maxLifetime: 1800
+  fruitFeedingLifetimeBonus: 60
+  flowerPollinationLifetimeBonus: 45
+  landingSeekTimeThreshold: 30
 --- !u!82 &1962336036909699428
 AudioSource:
   m_ObjectHideFlags: 0
