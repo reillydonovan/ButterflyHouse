@@ -7,6 +7,7 @@ using ButterflyHouse.Butterflies;
 using ButterflyHouse.Plants;
 using ButterflyHouse.Interaction;
 using ButterflyHouse.Audio;
+using Core = ButterflyHouse.Core;
 
 namespace ButterflyHouse.Editor
 {
@@ -142,6 +143,63 @@ namespace ButterflyHouse.Editor
             // Create InteractionManager
             GameObject interactionManagerObj = new GameObject("InteractionManager");
             InteractionManager interactionManager = interactionManagerObj.AddComponent<InteractionManager>();
+            
+            // Create EcosystemStateController (new spec system)
+            GameObject ecosystemStateObj = new GameObject("EcosystemStateController");
+            Core.EcosystemStateController ecosystemStateController = ecosystemStateObj.AddComponent<Core.EcosystemStateController>();
+            
+            // Create ProgressionStageManager
+            GameObject stageManagerObj = new GameObject("ProgressionStageManager");
+            Core.ProgressionStageManager stageManager = stageManagerObj.AddComponent<Core.ProgressionStageManager>();
+            stageManagerObj.transform.SetParent(ecosystemStateObj.transform);
+            
+            // Create HandAuraSystem
+            GameObject handAuraObj = new GameObject("HandAuraSystem");
+            Core.HandAuraSystem handAuraSystem = handAuraObj.AddComponent<Core.HandAuraSystem>();
+            handAuraObj.transform.SetParent(ecosystemStateObj.transform);
+            
+            // Create EventOrchestrator
+            GameObject eventOrchestratorObj = new GameObject("EventOrchestrator");
+            Core.EventOrchestrator eventOrchestrator = eventOrchestratorObj.AddComponent<Core.EventOrchestrator>();
+            eventOrchestratorObj.transform.SetParent(ecosystemStateObj.transform);
+            
+            // Create LightCycle
+            GameObject lightCycleObj = new GameObject("LightCycle");
+            Core.LightCycle lightCycle = lightCycleObj.AddComponent<Core.LightCycle>();
+            lightCycleObj.transform.SetParent(ecosystemStateObj.transform);
+            
+            // Link systems
+            SerializedObject ecosystemSO = new SerializedObject(ecosystemStateController);
+            SerializedProperty handAuraProp = ecosystemSO.FindProperty("handAuraSystem");
+            if (handAuraProp != null)
+            {
+                handAuraProp.objectReferenceValue = handAuraSystem;
+            }
+            SerializedProperty eventOrchProp = ecosystemSO.FindProperty("eventOrchestrator");
+            if (eventOrchProp != null)
+            {
+                eventOrchProp.objectReferenceValue = eventOrchestrator;
+            }
+            SerializedProperty stageManagerProp = ecosystemSO.FindProperty("stageManager");
+            if (stageManagerProp != null)
+            {
+                stageManagerProp.objectReferenceValue = stageManager;
+            }
+            SerializedProperty lightCycleProp = ecosystemSO.FindProperty("lightCycle");
+            if (lightCycleProp != null)
+            {
+                lightCycleProp.objectReferenceValue = lightCycle;
+            }
+            ecosystemSO.ApplyModifiedProperties();
+            
+            // Link stage manager to ecosystem state controller
+            SerializedObject stageSO = new SerializedObject(stageManager);
+            SerializedProperty butterflyManagerProp = stageSO.FindProperty("butterflyManager");
+            if (butterflyManagerProp != null)
+            {
+                butterflyManagerProp.objectReferenceValue = butterflyManager;
+            }
+            stageSO.ApplyModifiedProperties();
             
             // Create a simple ground plane
             GameObject groundObj = GameObject.CreatePrimitive(PrimitiveType.Plane);
@@ -343,6 +401,9 @@ namespace ButterflyHouse.Editor
             AudioSource audioSource = butterflyObj.AddComponent<AudioSource>();
             ButterflyAudio audio = butterflyObj.AddComponent<ButterflyAudio>();
             
+            // Add ButterflyFormEvolution
+            ButterflyFormEvolution formEvolution = butterflyObj.AddComponent<ButterflyFormEvolution>();
+            
             // Configure AudioSource
             audioSource.playOnAwake = false;
             audioSource.loop = true;
@@ -442,6 +503,7 @@ namespace ButterflyHouse.Editor
             // Add components
             GenerativePlant plant = plantObj.AddComponent<GenerativePlant>();
             PlantVisualController visual = plantObj.AddComponent<PlantVisualController>();
+            PlantGrowthSystem growthSystem = plantObj.AddComponent<PlantGrowthSystem>();
             AudioSource audioSource = plantObj.AddComponent<AudioSource>();
             
             // Configure AudioSource

@@ -121,6 +121,7 @@ GameObject:
   - component: {fileID: 7634496000122805471}
   - component: {fileID: 1962336036909699428}
   - component: {fileID: 8727337910020215630}
+  - component: {fileID: 6127132560345324111}
   - component: {fileID: 4504593633896859342}
   - component: {fileID: 4124534123255577060}
   m_Layer: 0
@@ -160,6 +161,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   visualController: {fileID: 0}
   audioController: {fileID: 0}
+  formEvolution: {fileID: 0}
   trailRenderer: {fileID: 0}
   butterflyCollider: {fileID: 0}
   emergingDuration: 2
@@ -194,6 +196,8 @@ MonoBehaviour:
     m_Bits: 4294967295
   minLandingDuration: 2
   maxLandingDuration: 8
+  minLandingCooldown: 10
+  maxLandingCooldown: 30
 --- !u!82 &1962336036909699428
 AudioSource:
   m_ObjectHideFlags: 0
@@ -305,8 +309,34 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   audioSource: {fileID: 0}
   speedToVolumeFactor: 0.5
+  minVolume: 0.1
   pitchVariation: 0.1
   lfoRate: 2
+--- !u!114 &6127132560345324111
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7903024207710782821}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e49128a8a8268474f975c3ecce6c1665, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  currentTier: 0
+  visualController: {fileID: 0}
+  audioController: {fileID: 0}
+  evolveBasedOnStage: 1
+  stageRequiredForSineform: 1
+  stageRequiredForSawform: 2
+  stageRequiredForSquareform: 3
+  stageRequiredForFM: 4
+  stageRequiredForPureWaveform: 5
+  sineformChance: 0.3
+  sawformChance: 0.2
+  squareformChance: 0.15
+  fmChance: 0.1
 --- !u!96 &4504593633896859342
 TrailRenderer:
   serializedVersion: 3

@@ -145,12 +145,18 @@ namespace ButterflyHouse.Plants
                 if (clip != null)
                 {
                     float volume = audioVolume;
-                    if (Settings.Instance != null)
+                    if (Core.Settings.Instance != null)
                     {
-                        volume *= Settings.Instance.plantVolume;
+                        volume *= Core.Settings.Instance.plantVolume;
                     }
                     audioSource.PlayOneShot(clip, volume);
                 }
+            }
+            
+            // Notify ecosystem manager of butterfly-plant interaction
+            if (Core.EcosystemStateController.Instance != null)
+            {
+                Core.EcosystemStateController.Instance.OnButterflyPlantInteraction();
             }
             
             // Start consumption if enabled

@@ -71,7 +71,7 @@ namespace ButterflyHouse.Butterflies
         }
         
         /// <summary>
-        /// Set wave deformation parameters (for waveform transformation mode).
+        /// Set waveform parameters for visual deformation (sine, saw, square, FM, pure waveform).
         /// </summary>
         public void SetWaveParams(float amplitude, float frequency)
         {

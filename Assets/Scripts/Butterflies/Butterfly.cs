@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using ButterflyHouse.Core;
+using ButterflyHouse.Interaction;
 
 namespace ButterflyHouse.Butterflies
 {
@@ -22,6 +23,7 @@ namespace ButterflyHouse.Butterflies
         [Header("Components")]
         [SerializeField] private ButterflyVisualController visualController;
         [SerializeField] private ButterflyAudio audioController;
+        [SerializeField] private ButterflyFormEvolution formEvolution;
         [SerializeField] private TrailRenderer trailRenderer;
         [SerializeField] private Collider butterflyCollider;
         
@@ -72,6 +74,9 @@ namespace ButterflyHouse.Butterflies
             
             if (audioController == null)
                 audioController = GetComponent<ButterflyAudio>();
+            
+            if (formEvolution == null)
+                formEvolution = GetComponent<ButterflyFormEvolution>();
             
             if (trailRenderer == null)
                 trailRenderer = GetComponentInChildren<TrailRenderer>();
@@ -456,6 +461,22 @@ namespace ButterflyHouse.Butterflies
             
             if (_currentLandingTarget != null)
             {
+                // Check if landing on player hand
+                HandProxy handProxy = _currentLandingTarget.GetComponent<HandProxy>();
+                if (handProxy == null && _currentLandingTarget.transform.parent != null)
+                {
+                    handProxy = _currentLandingTarget.transform.parent.GetComponent<HandProxy>();
+                }
+                
+                if (handProxy != null)
+                {
+                    // Notify ecosystem manager that butterfly landed on player
+                    if (Core.EcosystemStateController.Instance != null)
+                    {
+                        Core.EcosystemStateController.Instance.OnButterflyLandOnPlayer();
+                    }
+                }
+                
                 // Store this as the last landing target
                 _lastLandingTarget = _currentLandingTarget;
                 
@@ -468,6 +489,32 @@ namespace ButterflyHouse.Butterflies
                 if (fruit != null)
                 {
                     fruit.OnButterflyLeft(this);
+                }
+                
+                // Check if landing on plant
+                Plants.GenerativePlant plant = _currentLandingTarget.GetComponent<Plants.GenerativePlant>();
+                if (plant == null && _currentLandingTarget.transform.parent != null)
+                {
+                    plant = _currentLandingTarget.transform.parent.GetComponent<Plants.GenerativePlant>();
+                }
+                if (plant != null)
+                {
+                    // Notify ecosystem manager of plant interaction
+                    if (Core.EcosystemStateController.Instance != null)
+                    {
+                        Core.EcosystemStateController.Instance.OnButterflyPlantInteraction();
+                    }
+                    
+                    // Notify plant growth system of butterfly visit
+                    Plants.PlantGrowthSystem growthSystem = plant.GetComponent<Plants.PlantGrowthSystem>();
+                    if (growthSystem == null && plant.transform.parent != null)
+                    {
+                        growthSystem = plant.transform.parent.GetComponent<Plants.PlantGrowthSystem>();
+                    }
+                    if (growthSystem != null)
+                    {
+                        growthSystem.OnButterflyVisit();
+                    }
                 }
                 
                 _currentLandingTarget.Release();

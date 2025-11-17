@@ -17,6 +17,8 @@ namespace ButterflyHouse.Butterflies
         [Header("Modulation")]
         [Range(0f, 1f)]
         [SerializeField] private float speedToVolumeFactor = 0.5f;
+        [Range(0f, 1f)]
+        [SerializeField] private float minVolume = 0.1f; // Minimum volume even when not moving
         [Range(0f, 0.2f)]
         [SerializeField] private float pitchVariation = 0.1f;
         [Range(0f, 10f)]
@@ -64,7 +66,27 @@ namespace ButterflyHouse.Butterflies
             if (archetype.baseTone != null)
             {
                 audioSource.clip = archetype.baseTone;
+                audioSource.volume = _baseVolume; // Set initial volume
+                
+                // Ensure AudioSource is properly configured
+                audioSource.enabled = true;
+                audioSource.mute = false;
+                
+                // Set 3D sound settings for spatial audio
+                audioSource.spatialBlend = 1f; // Full 3D
+                audioSource.rolloffMode = AudioRolloffMode.Logarithmic;
+                audioSource.minDistance = 1f;
+                audioSource.maxDistance = 20f;
+                
+                // Ensure AudioListener exists
+                if (Camera.main != null && Camera.main.GetComponent<AudioListener>() == null)
+                {
+                    Debug.LogWarning("ButterflyAudio: No AudioListener found on Main Camera! Audio will not be heard.");
+                }
+                
                 audioSource.Play();
+                
+                Debug.Log($"ButterflyAudio: Started playing clip '{archetype.baseTone.name}' on butterfly. Volume: {audioSource.volume:F2}, Clip: {(audioSource.clip != null ? audioSource.clip.name : "null")}");
             }
             else
             {
@@ -94,6 +116,10 @@ namespace ButterflyHouse.Butterflies
             // Modulate volume based on speed
             float speed = _butterfly.CurrentSpeed;
             float speedVolume = Mathf.Clamp01(speed * speedToVolumeFactor);
+            
+            // Ensure minimum volume even when not moving
+            speedVolume = Mathf.Max(speedVolume, minVolume);
+            
             float finalVolume = _baseVolume * _currentIntensity * speedVolume;
             
             if (Settings.Instance != null)
@@ -101,7 +127,16 @@ namespace ButterflyHouse.Butterflies
                 finalVolume *= Settings.Instance.butterflyVolume;
             }
             
+            // Clamp final volume to ensure it's never completely silent
+            finalVolume = Mathf.Clamp(finalVolume, 0.01f, 1f);
+            
             audioSource.volume = finalVolume;
+            
+            // Debug: Log if volume is very low
+            if (finalVolume < 0.05f && Time.frameCount % 300 == 0) // Log every 5 seconds at 60fps
+            {
+                Debug.LogWarning($"ButterflyAudio: Volume very low ({finalVolume:F3}). Speed: {speed:F3}, BaseVol: {_baseVolume:F2}, Intensity: {_currentIntensity:F2}, Settings: {Settings.Instance?.butterflyVolume ?? 1f:F2}");
+            }
             
             // Modulate pitch with LFO and movement
             float lfo = Mathf.Sin(Time.time * lfoRate) * pitchVariation;

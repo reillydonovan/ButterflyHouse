@@ -94,6 +94,19 @@ namespace ButterflyHouse.Plants
             // Audio feedback
             PlayRandomSound();
             
+            // Notify ecosystem manager of player interaction
+            if (Core.EcosystemStateController.Instance != null)
+            {
+                Core.EcosystemStateController.Instance.OnPlayerPlantInteraction();
+            }
+            
+            // Notify plant growth system
+            PlantGrowthSystem growthSystem = GetComponent<PlantGrowthSystem>();
+            if (growthSystem != null)
+            {
+                growthSystem.OnTouched();
+            }
+            
             // Reset concurrent touches after delay
             Invoke(nameof(DecrementConcurrentTouches), 0.3f);
         }

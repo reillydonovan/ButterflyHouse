@@ -12,6 +12,11 @@ namespace ButterflyHouse.Core
         [SerializeField] private ButterflyHouse.Butterflies.ButterflyManager butterflyManager;
         [SerializeField] private ButterflyHouse.Audio.AudioManager audioManager;
         [SerializeField] private ButterflyHouse.Interaction.InteractionManager interactionManager;
+        [SerializeField] private EcosystemStateController ecosystemStateController;
+        [SerializeField] private HandAuraSystem handAuraSystem;
+        [SerializeField] private EventOrchestrator eventOrchestrator;
+        [SerializeField] private ProgressionStageManager stageManager;
+        [SerializeField] private LightCycle lightCycle;
         
         [Header("Experience Settings")]
         [SerializeField] private bool autoStart = true;
@@ -30,6 +35,21 @@ namespace ButterflyHouse.Core
             
             if (interactionManager == null)
                 interactionManager = FindObjectOfType<ButterflyHouse.Interaction.InteractionManager>();
+            
+            if (ecosystemStateController == null)
+                ecosystemStateController = FindObjectOfType<EcosystemStateController>();
+            
+            if (handAuraSystem == null)
+                handAuraSystem = FindObjectOfType<HandAuraSystem>();
+            
+            if (eventOrchestrator == null)
+                eventOrchestrator = FindObjectOfType<EventOrchestrator>();
+            
+            if (stageManager == null)
+                stageManager = FindObjectOfType<ProgressionStageManager>();
+            
+            if (lightCycle == null)
+                lightCycle = FindObjectOfType<LightCycle>();
         }
         
         private void Start()
