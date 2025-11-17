@@ -733,6 +733,14 @@ namespace ButterflyHouse.Editor
             fruitMesh.transform.localPosition = Vector3.zero;
             fruitMesh.transform.localScale = Vector3.one * 0.4f;
             
+            // Add collider for touch detection (set as trigger)
+            SphereCollider fruitCollider = fruitMesh.GetComponent<SphereCollider>();
+            if (fruitCollider != null)
+            {
+                fruitCollider.isTrigger = true; // Enable trigger for touch detection
+                fruitCollider.radius = 0.5f; // Slightly larger for easier touching
+            }
+            
             // Add components
             Plants.GenerativeFruit fruit = fruitObj.AddComponent<Plants.GenerativeFruit>();
             Plants.FruitGrowthSystem growthSystem = fruitObj.AddComponent<Plants.FruitGrowthSystem>();
@@ -806,6 +814,14 @@ namespace ButterflyHouse.Editor
             flowerMesh.transform.SetParent(flowerObj.transform);
             flowerMesh.transform.localPosition = Vector3.zero;
             flowerMesh.transform.localScale = Vector3.one * 0.25f;
+            
+            // Add collider for touch detection (set as trigger)
+            SphereCollider flowerCollider = flowerMesh.GetComponent<SphereCollider>();
+            if (flowerCollider != null)
+            {
+                flowerCollider.isTrigger = true; // Enable trigger for touch detection
+                flowerCollider.radius = 0.35f; // Slightly larger for easier touching
+            }
             
             // Add components
             Flowers.Flower flowerComponent = flowerObj.AddComponent<Flowers.Flower>();

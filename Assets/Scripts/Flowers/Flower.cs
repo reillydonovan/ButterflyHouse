@@ -49,6 +49,10 @@ namespace ButterflyHouse.Flowers
         [Header("Parent Plant")]
         [SerializeField] private Plants.GenerativePlant parentPlant;
         
+        [Header("Touch Interaction")]
+        [SerializeField] private float touchCooldown = 0.5f; // Cooldown between touches
+        [SerializeField] private bool allowMultipleTouches = true;
+        
         private void Start()
         {
             // Ensure parent plant reference is set
@@ -57,6 +61,7 @@ namespace ButterflyHouse.Flowers
         }
         
         private int _stageProgressionPollinationCount = 0;
+        private float _lastTouchTime = 0f;
         
         // Events
         public System.Action<FlowerStage> OnStageChanged;
@@ -370,6 +375,64 @@ namespace ButterflyHouse.Flowers
         public float PollenYield => pollenYield;
         public float InfluenceRadius => influenceRadius;
         public Plants.GenerativePlant ParentPlant => parentPlant;
+        
+        /// <summary>
+        /// Called when player touches the flower.
+        /// </summary>
+        public void OnTouched(Vector3 touchPoint)
+        {
+            // Check cooldown
+            if (Time.time - _lastTouchTime < touchCooldown && !allowMultipleTouches)
+                return;
+            
+            _lastTouchTime = Time.time;
+            
+            // Visual feedback - pulse petals
+            if (visualController != null)
+            {
+                visualController.OnNectarSipped(); // Reuse nectar sipped visual
+            }
+            
+            // Audio feedback - play nectar melody
+            PlayNectarMelody();
+            
+            // Notify ecosystem orchestrator (if exists) - for curiosity level
+            if (Core.EcosystemOrchestrator.Instance != null)
+            {
+                // Could add RegisterFlowerTouch method to orchestrator
+                // For now, we'll just trigger visual/audio feedback
+            }
+            
+            // Notify ecosystem state controller for compatibility
+            if (Core.EcosystemStateController.Instance != null)
+            {
+                Core.EcosystemStateController.Instance.OnPlayerExploration(); // Increments curiosity
+            }
+            
+            // Make flower more attractive to butterflies (could increase nectar value temporarily)
+            // This encourages pollination as mentioned in README
+        }
+        
+        private void OnTriggerEnter(Collider other)
+        {
+            // Check if this is a hand proxy or interaction
+            var handProxy = other.GetComponent<Interaction.HandProxy>();
+            if (handProxy != null)
+            {
+                Vector3 touchPoint = other.ClosestPoint(transform.position);
+                OnTouched(touchPoint);
+            }
+        }
+        
+        private void OnCollisionEnter(Collision collision)
+        {
+            var handProxy = collision.gameObject.GetComponent<Interaction.HandProxy>();
+            if (handProxy != null)
+            {
+                Vector3 touchPoint = collision.contacts[0].point;
+                OnTouched(touchPoint);
+            }
+        }
     }
 }
 

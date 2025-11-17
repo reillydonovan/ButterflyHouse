@@ -44,6 +44,10 @@ namespace ButterflyHouse.Plants
         [SerializeField] private float energyOutput = 0.5f; // Energy given per second to butterflies
         [SerializeField] private float resonanceFieldRadius = 5f; // Radius of energy field
         
+        [Header("Touch Interaction")]
+        [SerializeField] private float touchCooldown = 0.5f; // Cooldown between touches
+        [SerializeField] private bool allowMultipleTouches = true;
+        
         [Header("Stage")]
         [SerializeField] private FruitGrowthSystem fruitGrowthSystem;
         
@@ -54,6 +58,7 @@ namespace ButterflyHouse.Plants
         private float _consumptionTimer = 0f;
         private float _melodyTimer = 0f;
         private FruitGrowthSystem.FruitStage _currentStage = FruitGrowthSystem.FruitStage.Seed;
+        private float _lastTouchTime = 0f;
         
         private void Awake()
         {
@@ -462,6 +467,58 @@ namespace ButterflyHouse.Plants
         public void OnStageChanged(FruitGrowthSystem.FruitStage stage)
         {
             OnFruitStageChanged(stage);
+        }
+        
+        /// <summary>
+        /// Called when player touches the fruit.
+        /// </summary>
+        public void OnTouched(Vector3 touchPoint)
+        {
+            // Check cooldown
+            if (Time.time - _lastTouchTime < touchCooldown && !allowMultipleTouches)
+                return;
+            
+            _lastTouchTime = Time.time;
+            
+            // Visual feedback - pulse glow
+            PulseGlow();
+            
+            // Audio feedback - play stage-based melody
+            PlayMelody();
+            
+            // Notify ecosystem orchestrator (if exists) - for curiosity level
+            if (Core.EcosystemOrchestrator.Instance != null)
+            {
+                // Register fruit touch (could add RegisterFruitTouch method to orchestrator)
+                // For now, we'll just trigger visual/audio feedback
+            }
+            
+            // Notify ecosystem state controller for compatibility
+            if (Core.EcosystemStateController.Instance != null)
+            {
+                Core.EcosystemStateController.Instance.OnPlayerExploration(); // Increments curiosity
+            }
+        }
+        
+        private void OnTriggerEnter(Collider other)
+        {
+            // Check if this is a hand proxy or interaction
+            var handProxy = other.GetComponent<Interaction.HandProxy>();
+            if (handProxy != null)
+            {
+                Vector3 touchPoint = other.ClosestPoint(transform.position);
+                OnTouched(touchPoint);
+            }
+        }
+        
+        private void OnCollisionEnter(Collision collision)
+        {
+            var handProxy = collision.gameObject.GetComponent<Interaction.HandProxy>();
+            if (handProxy != null)
+            {
+                Vector3 touchPoint = collision.contacts[0].point;
+                OnTouched(touchPoint);
+            }
         }
     }
 }
